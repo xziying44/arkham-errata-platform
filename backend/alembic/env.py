@@ -6,6 +6,7 @@ from alembic import context
 
 from app.database import Base
 from app.config import settings
+import app.models  # noqa: F401  -- 确保所有模型被 SQLAlchemy 注册到 Base.metadata
 
 config = context.config
 if config.config_file_name is not None:
