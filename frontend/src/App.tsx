@@ -1,20 +1,23 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
+import { AuthProvider } from './hooks/useAuth';
+import LoginPage from './pages/LoginPage';
+import AppLayout from './components/AppLayout';
 
 function App() {
   return (
     <ConfigProvider locale={zhCN}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Navigate to="/cards" replace />} />
-          <Route path="/cards" element={<div style={{ padding: 24 }}>卡牌浏览（开发中）</div>} />
-          <Route path="/login" element={<div style={{ padding: 24 }}>登录页（开发中）</div>} />
-          <Route path="*" element={<div style={{ padding: 24 }}>页面不存在</div>} />
-        </Routes>
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/*" element={<AppLayout />} />
+            <Route path="/" element={<Navigate to="/cards" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </ConfigProvider>
   );
 }
-
 export default App;
