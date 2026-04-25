@@ -22,7 +22,6 @@ dependencies = [
 dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.24.0",
-    "httpx>=0.28.0",
 ]
 
 [build-system]
@@ -30,4 +29,4 @@ requires = ["setuptools>=75.0.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["app*", "tests*"]
+include = ["app*"]

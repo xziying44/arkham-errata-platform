@@ -1,3 +1,8 @@
+"""
+测试配置前提条件:
+- 本地 PostgreSQL 必须运行在 localhost:5432
+- 需要创建测试数据库: createdb arkham_errata_test
+"""
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
