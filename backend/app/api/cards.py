@@ -296,6 +296,24 @@ async def get_card_file_content(arkhamdb_id: str, face: str, db: AsyncSession = 
     }
 
 
+@router.post("/preview")
+async def preview_card(body: dict, db: AsyncSession = Depends(get_db)):
+    """预览渲染卡牌"""
+    from app.services.renderer import render_card_preview
+
+    preview_dir = settings.project_root / settings.cache_dir / "previews"
+    preview_dir.mkdir(parents=True, exist_ok=True)
+
+    arkhamdb_id = body.get("arkhamdb_id", "preview")
+    card_content = body.get("content", {})
+
+    result_path = render_card_preview(card_content, preview_dir, arkhamdb_id)
+    if result_path is None:
+        raise HTTPException(status_code=500, detail="渲染失败")
+
+    return {"preview_path": result_path}
+
+
 @router.post("/rescan")
 async def rescan(db: AsyncSession = Depends(get_db)):
     """重新执行全量扫描"""
