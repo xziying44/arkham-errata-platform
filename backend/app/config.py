@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/arkham_errata"
     cors_origin: str = "http://localhost:5173"
     project_root: Path = Path(__file__).parent.parent.parent
+    secret_key: str = "change-me-in-production"
+    access_token_expire_minutes: int = 480
 
 
 settings = Settings()
