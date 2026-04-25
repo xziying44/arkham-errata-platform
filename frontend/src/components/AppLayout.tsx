@@ -3,6 +3,10 @@ import { Layout, Menu, Button } from 'antd';
 import { useAuth } from '../hooks/useAuth';
 import { ProtectedRoute, AdminRoute } from './ProtectedRoute';
 import CardBrowserPage from '../pages/CardBrowserPage';
+import ErrataEditorPage from '../pages/ErrataEditorPage';
+import ReviewPage from '../pages/ReviewPage';
+import MappingPage from '../pages/MappingPage';
+import PublishPage from '../pages/PublishPage';
 
 const { Header, Content } = Layout;
 
@@ -37,10 +41,11 @@ export default function AppLayout() {
       <Content style={{ padding: 24 }}>
         <Routes>
           <Route path="/cards" element={<ProtectedRoute><CardBrowserPage /></ProtectedRoute>} />
+          <Route path="/errata/:arkhamdbId" element={<ProtectedRoute><ErrataEditorPage /></ProtectedRoute>} />
           <Route path="/my-errata" element={<ProtectedRoute><div style={{ padding: 24 }}>我的勘误（开发中）</div></ProtectedRoute>} />
-          <Route path="/admin/review" element={<AdminRoute><div style={{ padding: 24 }}>勘误审核（开发中）</div></AdminRoute>} />
-          <Route path="/admin/mapping" element={<AdminRoute><div style={{ padding: 24 }}>映射管理（开发中）</div></AdminRoute>} />
-          <Route path="/admin/publish" element={<AdminRoute><div style={{ padding: 24 }}>发布管理（开发中）</div></AdminRoute>} />
+          <Route path="/admin/review" element={<AdminRoute><ReviewPage /></AdminRoute>} />
+          <Route path="/admin/mapping" element={<AdminRoute><MappingPage /></AdminRoute>} />
+          <Route path="/admin/publish" element={<AdminRoute><PublishPage /></AdminRoute>} />
         </Routes>
       </Content>
     </Layout>

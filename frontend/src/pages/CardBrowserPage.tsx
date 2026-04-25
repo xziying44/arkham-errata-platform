@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Table, Select, Input, Tag, Space, Card } from 'antd';
 import { fetchCards, fetchFilters } from '../api/cards';
-import { CardIndex } from '../types';
+import type { CardIndex } from '../types';
 
 export default function CardBrowserPage() {
   const [cards, setCards] = useState<CardIndex[]>([]);

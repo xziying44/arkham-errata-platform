@@ -1,7 +1,7 @@
 import client from './client';
-import { CardIndex, CardDetail } from '../types';
+import type { CardDetail } from '../types';
 
-export async function fetchCards(params: { category?: string; cycle?: string; keyword?: string; page?: number; page_size?: number }) {
+export async function fetchCards(params: { category?: string; cycle?: string; keyword?: string; mapping_status?: string; page?: number; page_size?: number }) {
   const resp = await client.get('/cards', { params });
   return resp.data;
 }
