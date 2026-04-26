@@ -1,0 +1,1814 @@
+{
+  "total_cards": 41,
+  "missing_refs": [],
+  "cards": [
+    {
+      "card_path": "重返卡/50_重返基础/50011_a.card",
+      "arkhamdb_id": "50011",
+      "name": "重返聚集于此",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_the_gathering.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_the_gathering.png"
+        },
+        {
+          "src": "@exported_icons/ghouls.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/ghouls.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/ghouls_of_umrdhoth.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/ghouls_of_umrdhoth.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/50_重返基础/50025_a.card",
+      "arkhamdb_id": "50025",
+      "name": "重返午夜假面",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_the_midnight_masks.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_the_midnight_masks.png"
+        },
+        {
+          "src": "@exported_icons/return_cult.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_cult.png"
+        },
+        {
+          "src": "@exported_icons/dark_cult.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/dark_cult.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/the_devourers_cult.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/the_devourers_cult.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/50_重返基础/50032a_a.card",
+      "arkhamdb_id": "50032a",
+      "name": "重返地底噬魔",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_the_devourer_below.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_the_devourer_below.png"
+        },
+        {
+          "src": "@exported_icons/ghouls.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/ghouls.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/ghouls_of_umrdhoth.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/ghouls_of_umrdhoth.png"
+        },
+        {
+          "src": "@exported_icons/dark_cult.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/dark_cult.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/the_devourers_cult.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/the_devourers_cult.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/51_敦威治遗产/51012_a.card",
+      "arkhamdb_id": "51012",
+      "name": "重返课外活动",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_extracurricular_activities.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_extracurricular_activities.png"
+        },
+        {
+          "src": "@exported_icons/the_beyond.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/the_beyond.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/beyond_the_threshold.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/beyond_the_threshold.png"
+        },
+        {
+          "src": "@exported_icons/locked_doors.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/locked_doors.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/secret_doors.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/secret_doors.png"
+        },
+        {
+          "src": "@exported_icons/ancient_evils.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/ancient_evils.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/resurgent_evils.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/resurgent_evils.png"
+        },
+        {
+          "src": "@exported_icons/agents_of_yog.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/agents_of_yog.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/yog_sothoths_emissaries.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/yog_sothoths_emissaries.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/51_敦威治遗产/51015_a.card",
+      "arkhamdb_id": "51015",
+      "name": "重返百赌百胜",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_the_house_always_wins.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_the_house_always_wins.png"
+        },
+        {
+          "src": "@exported_icons/striking_fear.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/striking_fear.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/erratic_fear.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/erratic_fear.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/51_敦威治遗产/51020_a.card",
+      "arkhamdb_id": "51020",
+      "name": "重返博物馆之夜",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_the_miskatonic_museum.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_the_miskatonic_museum.png"
+        },
+        {
+          "src": "@exported_icons/the_beyond.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/the_beyond.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/beyond_the_threshold.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/beyond_the_threshold.png"
+        },
+        {
+          "src": "@exported_icons/locked_doors.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/locked_doors.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/secret_doors.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/secret_doors.png"
+        },
+        {
+          "src": "@exported_icons/chilling_cold.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/chilling_cold.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/creeping_cold.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/creeping_cold.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/51_敦威治遗产/51025_a.card",
+      "arkhamdb_id": "51025",
+      "name": "重返疯狂列车",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_the_essex_county_express.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_the_essex_county_express.png"
+        },
+        {
+          "src": "@exported_icons/the_beyond.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/the_beyond.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/beyond_the_threshold.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/beyond_the_threshold.png"
+        },
+        {
+          "src": "@exported_icons/ancient_evils.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/ancient_evils.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/resurgent_evils.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/resurgent_evils.png"
+        },
+        {
+          "src": "@exported_icons/striking_fear.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/striking_fear.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/erratic_fear.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/erratic_fear.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/51_敦威治遗产/51032_a.card",
+      "arkhamdb_id": "51032",
+      "name": "重返血色祭坛",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_blood_on_the_altar.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_blood_on_the_altar.png"
+        },
+        {
+          "src": "@exported_icons/ancient_evils.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/ancient_evils.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/resurgent_evils.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/resurgent_evils.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/51_敦威治遗产/51041_a.card",
+      "arkhamdb_id": "51041",
+      "name": "重返无人知晓",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_undimensioned_and_unseen.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_undimensioned_and_unseen.png"
+        },
+        {
+          "src": "@exported_icons/striking_fear.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/striking_fear.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/erratic_fear.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/erratic_fear.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/51_敦威治遗产/51047_a.card",
+      "arkhamdb_id": "51047",
+      "name": "重返毁灭之地",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_extracurricular_activities.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_extracurricular_activities.png"
+        },
+        {
+          "src": "@exported_icons/striking_fear.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/striking_fear.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/erratic_fear.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/erratic_fear.png"
+        },
+        {
+          "src": "@exported_icons/ancient_evils.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/ancient_evils.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/resurgent_evils.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/resurgent_evils.png"
+        },
+        {
+          "src": "@exported_icons/chilling_cold.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/chilling_cold.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/creeping_cold.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/creeping_cold.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/51_敦威治遗产/51053_a.card",
+      "arkhamdb_id": "51053",
+      "name": "重返迷失时空",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_extracurricular_activities.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_extracurricular_activities.png"
+        },
+        {
+          "src": "@exported_icons/the_beyond.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/the_beyond.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/beyond_the_threshold.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/beyond_the_threshold.png"
+        },
+        {
+          "src": "@exported_icons/agents_of_yog.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/agents_of_yog.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/yog_sothoths_emissaries.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/yog_sothoths_emissaries.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/52_卡尔克萨之路/52014_a.card",
+      "arkhamdb_id": "52014",
+      "name": "重返谢幕",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_curtain_call.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_curtain_call.png"
+        },
+        {
+          "src": "@exported_icons/delusions.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/delusions.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/maddening_delusions.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/maddening_delusions.png"
+        },
+        {
+          "src": "@exported_icons/striking_fear.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/striking_fear.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/neurotic_fear.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/neurotic_fear.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/52_卡尔克萨之路/52021_a.card",
+      "arkhamdb_id": "52021",
+      "name": "重返最后的王者",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_the_last_king.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_the_last_king.png"
+        },
+        {
+          "src": "@exported_icons/decay_and_filth.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/decay_and_filth.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/decaying_reality.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/decaying_reality.png"
+        },
+        {
+          "src": "@exported_icons/ancient_evils.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/ancient_evils.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/delusory_evils.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/delusory_evils.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/52_卡尔克萨之路/52028_a.card",
+      "arkhamdb_id": "52028",
+      "name": "重返往事回声",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_echoes_of_the_past.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_echoes_of_the_past.png"
+        },
+        {
+          "src": "@exported_icons/delusions.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/delusions.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/maddening_delusions.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/maddening_delusions.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/52_卡尔克萨之路/52034_a.card",
+      "arkhamdb_id": "52034",
+      "name": "重返邪秽誓约",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_the_unspeakable_oath.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_the_unspeakable_oath.png"
+        },
+        {
+          "src": "@exported_icons/delusions.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/delusions.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/maddening_delusions.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/maddening_delusions.png"
+        },
+        {
+          "src": "@exported_icons/decay_and_filth.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/decay_and_filth.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/decaying_reality.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/decaying_reality.png"
+        },
+        {
+          "src": "@exported_icons/agents_of_hastur.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/agents_of_hastur.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/hasturs_envoys.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/hasturs_envoys.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/52_卡尔克萨之路/52040_a.card",
+      "arkhamdb_id": "52040",
+      "name": "重返真相幻影",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_the_phantom_of_truth.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_the_phantom_of_truth.png"
+        },
+        {
+          "src": "@exported_icons/agents_of_hastur.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/agents_of_hastur.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/hasturs_envoys.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/hasturs_envoys.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/52_卡尔克萨之路/52048_a.card",
+      "arkhamdb_id": "52048",
+      "name": "重返苍白面具",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_the_pallid_mask.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_the_pallid_mask.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/52_卡尔克萨之路/52054_a.card",
+      "arkhamdb_id": "52054",
+      "name": "重返黑星升起",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_black_stars_rise.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_black_stars_rise.png"
+        },
+        {
+          "src": "@exported_icons/ancient_evils.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/ancient_evils.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/delusory_evils.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/delusory_evils.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/52_卡尔克萨之路/52059_a.card",
+      "arkhamdb_id": "52059",
+      "name": "重返卡城幽影",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_dim_carcosa.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_dim_carcosa.png"
+        },
+        {
+          "src": "@exported_icons/delusions.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/delusions.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/maddening_delusions.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/maddening_delusions.png"
+        },
+        {
+          "src": "@exported_icons/striking_fear.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/striking_fear.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/neurotic_fear.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/neurotic_fear.png"
+        },
+        {
+          "src": "@exported_icons/agents_of_hastur.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/agents_of_hastur.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/hasturs_envoys.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/hasturs_envoys.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/53_失落的时代/53016_a.card",
+      "arkhamdb_id": "53016",
+      "name": "重返荒莽密林",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_the_untamed_wilds.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_the_untamed_wilds.png"
+        },
+        {
+          "src": "@exported_icons/return_to_the_rainforest.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_the_rainforest.png"
+        },
+        {
+          "src": "@exported_icons/expedition.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/expedition.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/doomed_expedition.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/doomed_expedition.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/53_失落的时代/53016_b.card",
+      "arkhamdb_id": "53016",
+      "name": "重返荒莽密林",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@地点图标/location-marker-purple-moon.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/地点图标/location-marker-purple-moon.png"
+        },
+        {
+          "src": "@地点图标/location-marker-blue-triangle.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/地点图标/location-marker-blue-triangle.png"
+        },
+        {
+          "src": "@地点图标/location-marker-red-square.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/地点图标/location-marker-red-square.png"
+        },
+        {
+          "src": "@地点图标/location-marker-orange-heart.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/地点图标/location-marker-orange-heart.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/53_失落的时代/53017_a.card",
+      "arkhamdb_id": "53017",
+      "name": "重返埃兹特里的覆灭",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_the_doom_of_eztli.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_the_doom_of_eztli.png"
+        },
+        {
+          "src": "@exported_icons/yigs_venom.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/yigs_venom.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/venomous_hate.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/venomous_hate.png"
+        },
+        {
+          "src": "@exported_icons/temporal_flux.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/temporal_flux.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/temporal_hunters.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/temporal_hunters.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/53_失落的时代/53028_a.card",
+      "arkhamdb_id": "53028",
+      "name": "重返命运之线",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_the_untamed_wilds.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_the_untamed_wilds.png"
+        },
+        {
+          "src": "@exported_icons/dark_cult.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/dark_cult.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/cult_of_pnakotus.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/cult_of_pnakotus.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/53_失落的时代/53038_a.card",
+      "arkhamdb_id": "53038",
+      "name": "重返界限彼端",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_the_doom_of_eztli.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_the_doom_of_eztli.png"
+        },
+        {
+          "src": "@exported_icons/temporal_flux.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/temporal_flux.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/temporal_hunters.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/temporal_hunters.png"
+        },
+        {
+          "src": "@exported_icons/yigs_venom.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/yigs_venom.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/venomous_hate.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/venomous_hate.png"
+        },
+        {
+          "src": "@exported_icons/dark_cult.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/dark_cult.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/cult_of_pnakotus.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/cult_of_pnakotus.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/53_失落的时代/53045_a.card",
+      "arkhamdb_id": "53045",
+      "name": "重返久远腹地，第一部分",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_the_heart_of_the_elders.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_the_heart_of_the_elders.png"
+        },
+        {
+          "src": "@exported_icons/return_to_pillars_of_judgement.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_pillars_of_judgement.png"
+        },
+        {
+          "src": "@exported_icons/return_to_the_rainforest.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_the_rainforest.png"
+        },
+        {
+          "src": "@exported_icons/expedition.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/expedition.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/doomed_expedition.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/doomed_expedition.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/53_失落的时代/53045_b.card",
+      "arkhamdb_id": "53045",
+      "name": "重返久远腹地，第一部分",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@地点图标/location-marker-purple-moon.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/地点图标/location-marker-purple-moon.png"
+        },
+        {
+          "src": "@地点图标/location-marker-blue-triangle.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/地点图标/location-marker-blue-triangle.png"
+        },
+        {
+          "src": "@地点图标/location-marker-red-square.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/地点图标/location-marker-red-square.png"
+        },
+        {
+          "src": "@地点图标/location-marker-orange-heart.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/地点图标/location-marker-orange-heart.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/53_失落的时代/53048_a.card",
+      "arkhamdb_id": "53048",
+      "name": "重返久远腹地，第二部分",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_the_heart_of_the_elders.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_the_heart_of_the_elders.png"
+        },
+        {
+          "src": "@exported_icons/return_to_knyan.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_knyan.png"
+        },
+        {
+          "src": "@exported_icons/yigs_venom.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/yigs_venom.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/venomous_hate.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/venomous_hate.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/53_失落的时代/53048_b.card",
+      "arkhamdb_id": "53048",
+      "name": "重返久远腹地，第二部分",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@地点图标/location-marker-purple-moon.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/地点图标/location-marker-purple-moon.png"
+        },
+        {
+          "src": "@地点图标/location-marker-blue-triangle.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/地点图标/location-marker-blue-triangle.png"
+        },
+        {
+          "src": "@地点图标/location-marker-red-square.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/地点图标/location-marker-red-square.png"
+        },
+        {
+          "src": "@地点图标/location-marker-green-diamond.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/地点图标/location-marker-green-diamond.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/53_失落的时代/53053_a.card",
+      "arkhamdb_id": "53053",
+      "name": "重返天机之城",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_city_of_archives.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_city_of_archives.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/53_失落的时代/53059_a.card",
+      "arkhamdb_id": "53059",
+      "name": "重返幽嘶深渊",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_the_depths_of_yoth.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_the_depths_of_yoth.png"
+        },
+        {
+          "src": "@exported_icons/yigs_venom.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/yigs_venom.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/venomous_hate.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/venomous_hate.png"
+        },
+        {
+          "src": "@exported_icons/expedition.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/expedition.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/doomed_expedition.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/doomed_expedition.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/53_失落的时代/53061_a.card",
+      "arkhamdb_id": "53061",
+      "name": "重返破碎永世",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_shattered_aeons.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_shattered_aeons.png"
+        },
+        {
+          "src": "@exported_icons/temporal_flux.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/temporal_flux.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/temporal_hunters.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/temporal_hunters.png"
+        },
+        {
+          "src": "@exported_icons/dark_cult.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/dark_cult.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/cult_of_pnakotus.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/cult_of_pnakotus.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/53_失落的时代/53066_a.card",
+      "arkhamdb_id": "53066",
+      "name": "重返时间倒流",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_turn_back_time.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_turn_back_time.png"
+        },
+        {
+          "src": "@exported_icons/return_to_the_doom_of_eztli.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_the_doom_of_eztli.png"
+        },
+        {
+          "src": "@exported_icons/temporal_flux.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/temporal_flux.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/temporal_hunters.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/temporal_hunters.png"
+        },
+        {
+          "src": "@exported_icons/yigs_venom.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/yigs_venom.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/venomous_hate.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/venomous_hate.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/54_万象无终/54016_a.card",
+      "arkhamdb_id": "54016",
+      "name": "重返暮色庄园失踪事件",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_disappearance_at_the_twilight_estate.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_disappearance_at_the_twilight_estate.png"
+        },
+        {
+          "src": "@exported_icons/trapped_spirits.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/trapped_spirits.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/bloodthirsty_spirits.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/bloodthirsty_spirits.png"
+        },
+        {
+          "src": "@exported_icons/realm_of_death.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/realm_of_death.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/spectral_realm.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/spectral_realm.png"
+        },
+        {
+          "src": "@exported_icons/inexorable_fate.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/inexorable_fate.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/unspeakable_fate.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/unspeakable_fate.png"
+        },
+        {
+          "src": "@exported_icons/chilling_cold.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/chilling_cold.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/cold_fog.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/cold_fog.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/54_万象无终/54017_a.card",
+      "arkhamdb_id": "54017",
+      "name": "重返巫异时刻",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_the_witching_hour.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_the_witching_hour.png"
+        },
+        {
+          "src": "@exported_icons/city_of_sins.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/city_of_sins.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/city_of_the_damned.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/city_of_the_damned.png"
+        },
+        {
+          "src": "@exported_icons/ancient_evils.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/ancient_evils.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/threatening_evil.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/threatening_evil.png"
+        },
+        {
+          "src": "@exported_icons/witchcraft.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/witchcraft.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/witchwork.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/witchwork.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/54_万象无终/54024_a.card",
+      "arkhamdb_id": "54024",
+      "name": "重返死亡门前",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_at_deaths_doorstep.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_at_deaths_doorstep.png"
+        },
+        {
+          "src": "@exported_icons/trapped_spirits.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/trapped_spirits.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/bloodthirsty_spirits.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/bloodthirsty_spirits.png"
+        },
+        {
+          "src": "@exported_icons/realm_of_death.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/realm_of_death.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/spectral_realm.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/spectral_realm.png"
+        },
+        {
+          "src": "@exported_icons/inexorable_fate.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/inexorable_fate.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/unspeakable_fate.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/unspeakable_fate.png"
+        },
+        {
+          "src": "@exported_icons/chilling_cold.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/chilling_cold.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/cold_fog.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/cold_fog.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/54_万象无终/54029_a.card",
+      "arkhamdb_id": "54029",
+      "name": "重返隐秘之名",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_the_secret_name.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_the_secret_name.png"
+        },
+        {
+          "src": "@exported_icons/city_of_sins.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/city_of_sins.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/city_of_the_damned.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/city_of_the_damned.png"
+        },
+        {
+          "src": "@exported_icons/inexorable_fate.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/inexorable_fate.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/unspeakable_fate.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/unspeakable_fate.png"
+        },
+        {
+          "src": "@exported_icons/realm_of_death.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/realm_of_death.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/spectral_realm.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/spectral_realm.png"
+        },
+        {
+          "src": "@exported_icons/witchcraft.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/witchcraft.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/witchwork.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/witchwork.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/54_万象无终/54034_a.card",
+      "arkhamdb_id": "54034",
+      "name": "重返恶罪报应",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_the_wages_of_sin.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_the_wages_of_sin.png"
+        },
+        {
+          "src": "@exported_icons/city_of_sins.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/city_of_sins.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/city_of_the_damned.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/city_of_the_damned.png"
+        },
+        {
+          "src": "@exported_icons/inexorable_fate.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/inexorable_fate.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/unspeakable_fate.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/unspeakable_fate.png"
+        },
+        {
+          "src": "@exported_icons/realm_of_death.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/realm_of_death.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/spectral_realm.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/spectral_realm.png"
+        },
+        {
+          "src": "@exported_icons/trapped_spirits.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/trapped_spirits.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/bloodthirsty_spirits.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/bloodthirsty_spirits.png"
+        },
+        {
+          "src": "@exported_icons/witchcraft.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/witchcraft.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/witchwork.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/witchwork.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/54_万象无终/54042_a.card",
+      "arkhamdb_id": "54042",
+      "name": "重返崇高利益",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_for_the_greater_good.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_for_the_greater_good.png"
+        },
+        {
+          "src": "@exported_icons/city_of_sins.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/city_of_sins.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/city_of_the_damned.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/city_of_the_damned.png"
+        },
+        {
+          "src": "@exported_icons/ancient_evils.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/ancient_evils.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/threatening_evil.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/threatening_evil.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/54_万象无终/54046_a.card",
+      "arkhamdb_id": "54046",
+      "name": "重返聚合幻灭",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_union_and_disillusion.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_union_and_disillusion.png"
+        },
+        {
+          "src": "@exported_icons/inexorable_fate.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/inexorable_fate.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/unspeakable_fate.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/unspeakable_fate.png"
+        },
+        {
+          "src": "@exported_icons/realm_of_death.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/realm_of_death.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/spectral_realm.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/spectral_realm.png"
+        },
+        {
+          "src": "@exported_icons/ancient_evils.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/ancient_evils.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/threatening_evil.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/threatening_evil.png"
+        },
+        {
+          "src": "@exported_icons/chilling_cold.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/chilling_cold.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/cold_fog.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/cold_fog.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/54_万象无终/54049_a.card",
+      "arkhamdb_id": "54049",
+      "name": "重返混沌魔掌",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_in_the_clutches_of_chaos.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_in_the_clutches_of_chaos.png"
+        },
+        {
+          "src": "@exported_icons/city_of_sins.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/city_of_sins.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/city_of_the_damned.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/city_of_the_damned.png"
+        },
+        {
+          "src": "@exported_icons/witchcraft.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/witchcraft.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/witchwork.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/witchwork.png"
+        }
+      ]
+    },
+    {
+      "card_path": "重返卡/54_万象无终/54056_a.card",
+      "arkhamdb_id": "54056",
+      "name": "重返黑色王座",
+      "type": "冒险参考卡",
+      "refs": [
+        {
+          "src": "@exported_icons/return_to_before_the_black_throne.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/return_to_before_the_black_throne.png"
+        },
+        {
+          "src": "@exported_icons/inexorable_fate.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/inexorable_fate.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/unspeakable_fate.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/unspeakable_fate.png"
+        },
+        {
+          "src": "@exported_icons/ancient_evils.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/ancient_evils.png"
+        },
+        {
+          "src": "@长箭头.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/长箭头.png"
+        },
+        {
+          "src": "@exported_icons/threatening_evil.png",
+          "exists": true,
+          "resolved": "/Users/xziying/project/arkham/卡牌数据库/exported_icons/threatening_evil.png"
+        }
+      ]
+    }
+  ]
+}

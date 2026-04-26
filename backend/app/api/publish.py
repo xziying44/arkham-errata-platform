@@ -1,6 +1,7 @@
 """发布 API - 审核通过后的发布管线（生成精灵图 → 上传 → 导出 → URL 替换）"""
 
 import json
+import shutil
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +14,7 @@ from app.services.sheet_generator import create_decksheet, group_cards_by_sheet
 from app.services.uploader import create_uploader
 from app.services.url_replacer import (
     generate_tts_bag_json,
-    replace_chinese_card_urls,
+    export_chinese_card_url_replacements,
     extract_steam_urls_from_json,
 )
 from app.services.renderer import render_card_preview
@@ -169,32 +170,70 @@ async def step5_upload_tts_json(
     }
 
 
+@router.post("/step6-export-replacements")
+async def step6_export_replacements(
+    body: dict,
+    admin: User = Depends(require_admin),
+):
+    """步骤6：导出 SCED-downloads 中文包替换文件，不直接修改官方仓库。"""
+    export_base = settings.project_root / settings.cache_dir / "exports" / "sced_downloads_patch"
+    if export_base.exists():
+        shutil.rmtree(export_base)
+    export_base.mkdir(parents=True, exist_ok=True)
+
+    roots = [
+        (
+            "decomposed/language-pack/Simplified Chinese - Campaigns",
+            settings.project_root
+            / settings.sced_downloads
+            / "decomposed"
+            / "language-pack"
+            / "Simplified Chinese - Campaigns",
+        ),
+        (
+            "decomposed/language-pack/Simplified Chinese - Player Cards",
+            settings.project_root
+            / settings.sced_downloads
+            / "decomposed"
+            / "language-pack"
+            / "Simplified Chinese - Player Cards",
+        ),
+    ]
+
+    all_modified: list[str] = []
+    for relative_root, source_root in roots:
+        if not source_root.exists():
+            continue
+        output_root = export_base / relative_root
+        modified = export_chinese_card_url_replacements(
+            source_root,
+            output_root,
+            body["url_mapping"],
+        )
+        all_modified.extend([f"{relative_root}/{item}" for item in modified])
+
+    manifest = {
+        "说明": "请将本压缩包内容复制到你的 SCED-downloads fork 仓库根目录，检查后提交 PR。官方仓库未被本系统直接修改。",
+        "modified_files": all_modified,
+        "total_modified": len(all_modified),
+    }
+    (export_base / "MANIFEST.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    archive_path = shutil.make_archive(str(export_base), "zip", export_base)
+    return FileResponse(
+        archive_path,
+        media_type="application/zip",
+        filename="SCED-downloads-PR补丁包.zip",
+    )
+
+
 @router.post("/step6-replace-urls")
 async def step6_replace_urls(
     body: dict,
     admin: User = Depends(require_admin),
 ):
-    """步骤6：将中文卡牌 JSON 中的图片 URL 替换为图床 URL"""
-    zh_roots = [
-        settings.project_root
-        / settings.sced_downloads
-        / "decomposed"
-        / "language-pack"
-        / "Simplified Chinese - Campaigns",
-        settings.project_root
-        / settings.sced_downloads
-        / "decomposed"
-        / "language-pack"
-        / "Simplified Chinese - Player Cards",
-    ]
-
-    all_modified = []
-    for zh_root in zh_roots:
-        if zh_root.exists():
-            modified = replace_chinese_card_urls(zh_root, body["url_mapping"])
-            all_modified.extend(modified)
-
-    return {
-        "modified_files": all_modified,
-        "total_modified": len(all_modified),
-    }
+    """兼容旧前端路径：实际只导出补丁包，不修改官方仓库。"""
+    return await step6_export_replacements(body, admin)

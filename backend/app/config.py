@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     data_repo_sync_enabled: bool = False
     data_repo_sync_interval_minutes: int = 60
     git_executable: str = "git"
+    tts_cache_warm_enabled: bool = True
+    tts_cache_warm_workers: int = 4
 
 
 settings = Settings()

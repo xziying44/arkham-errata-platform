@@ -33,3 +33,39 @@ def test_render_card_preview_uses_supported_jpg_format():
     with tempfile.TemporaryDirectory() as tmpdir:
         result = render_card_preview(content, Path(tmpdir), "format_check")
         assert result is None or result.endswith(".jpg")
+
+
+def test_render_card_preview_uses_card_database_as_working_dir(monkeypatch, tmp_path):
+    """正文中的 @exported_icons 应相对于卡牌数据库目录解析，而不是缓存目录。"""
+    import sys
+    import types
+    from PIL import Image
+    from app.config import settings
+
+    captured = {}
+
+    class FakeResult:
+        def save(self, output_path):
+            Image.new("RGB", (10, 10), (255, 255, 255)).save(output_path)
+
+    class FakeRenderer:
+        def __init__(self, assets_path=None, config=None):
+            captured["assets_path"] = assets_path
+            captured["config"] = config
+
+        def render(self, card_path, options):
+            captured["card_path"] = card_path
+            captured["working_dir"] = options.working_dir
+            return FakeResult()
+
+    class FakeOptions:
+        def __init__(self, **kwargs):
+            self.__dict__.update(kwargs)
+
+    fake_module = types.SimpleNamespace(CardRenderer=FakeRenderer, RenderOptions=FakeOptions)
+    monkeypatch.setitem(sys.modules, "arkham_card_maker", fake_module)
+
+    result = render_card_preview({"body": '<img src="@exported_icons/test.png"></img>'}, tmp_path, "embedded")
+
+    assert result is not None
+    assert captured["working_dir"] == str((settings.project_root / settings.local_card_db).resolve())

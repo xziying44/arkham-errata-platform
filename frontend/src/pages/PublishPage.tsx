@@ -6,7 +6,7 @@ import {
   step2Upload,
   step3ExportTTS,
   step5UploadTTSJson,
-  step6ReplaceUrls,
+  step6ExportReplacements,
 } from '../api/admin';
 
 /** 发布管理页面：六步发布流程 */
@@ -16,7 +16,7 @@ export default function PublishPage() {
   const [sheets, setSheets] = useState<any[]>([]);
   const [sheetUrls, setSheetUrls] = useState<Record<string, string>>({});
   const [urlMapping, setUrlMapping] = useState<Record<string, unknown> | null>(null);
-  const [modifiedCount, setModifiedCount] = useState(0);
+  const [exportedPatch, setExportedPatch] = useState(false);
   const [loading, setLoading] = useState(false);
 
   /** 第一步：生成精灵图 */
@@ -95,17 +95,23 @@ export default function PublishPage() {
     return false; // 阻止默认上传行为
   };
 
-  /** 第六步：替换中文包中的图片 URL */
+  /** 第六步：导出 SCED-downloads PR 补丁包 */
   const handleStep6 = async () => {
     if (!urlMapping) return;
     setLoading(true);
     try {
-      const data = await step6ReplaceUrls(urlMapping);
-      setModifiedCount(data.total_modified);
-      message.success(`替换完成: ${data.total_modified} 个文件`);
+      const blob = await step6ExportReplacements(urlMapping);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'SCED-downloads-PR补丁包.zip';
+      link.click();
+      URL.revokeObjectURL(url);
+      setExportedPatch(true);
+      message.success('已导出 SCED-downloads PR 补丁包');
       setCurrent(5);
     } catch {
-      message.error('替换失败');
+      message.error('导出补丁包失败');
     } finally {
       setLoading(false);
     }
@@ -153,7 +159,7 @@ export default function PublishPage() {
       ),
     },
     {
-      title: '替换中文包URL',
+      title: '导出PR补丁包',
       content: (
         <Button
           type="primary"
@@ -161,7 +167,7 @@ export default function PublishPage() {
           loading={loading}
           disabled={!urlMapping}
         >
-          执行替换
+          导出 SCED-downloads PR 补丁包
         </Button>
       ),
     },
@@ -169,11 +175,11 @@ export default function PublishPage() {
       title: '完成',
       content: (
         <Descriptions column={1}>
-          <Descriptions.Item label="修改文件数">
-            {modifiedCount}
+          <Descriptions.Item label="补丁包">
+            {exportedPatch ? '已下载' : '未生成'}
           </Descriptions.Item>
-          <Descriptions.Item label="状态">
-            请在 SCED-downloads 目录检查变更并提交 PR
+          <Descriptions.Item label="下一步">
+            将压缩包内容复制到你的 SCED-downloads fork 仓库根目录，检查后提交 PR
           </Descriptions.Item>
         </Descriptions>
       ),

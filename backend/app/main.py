@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.api import auth, cards, errata, review, publish, mapping
 from app.services.data_repo_sync import periodic_data_repo_sync
+from app.services.tts_cache_warmer import start_tts_cache_warmer, stop_tts_cache_warmer
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -15,10 +16,13 @@ async def lifespan(app: FastAPI):
     sync_task: asyncio.Task | None = None
     if settings.data_repo_sync_enabled:
         sync_task = asyncio.create_task(periodic_data_repo_sync(stop_event))
+    if settings.tts_cache_warm_enabled:
+        start_tts_cache_warmer()
     try:
         yield
     finally:
         stop_event.set()
+        await stop_tts_cache_warmer()
         if sync_task:
             await sync_task
 

@@ -8,12 +8,13 @@ from sqlalchemy import select, func, or_
 from app.database import get_db
 from app.config import settings
 from app.models.card import CardIndex, LocalCardFile, TTSCardImage, SharedCardBack, MappingStatus
-from app.models.errata import Errata
+from app.models.errata import Errata, ErrataStatus
 from app.schemas.card import CardIndexResponse, CardDetailResponse, LocalCardFileResponse, TTSCardImageResponse
 from app.services.scanner import scan_card_database, detect_double_sided, load_card_content
 from app.services.tts_parser import scan_tts_directory, find_shared_backs
 from app.services.mapping_index import get_mapping_detail, resolve_card_image_mappings
 from app.services.image_cache import download_and_cut_sheet
+from app.services.tts_cache_warmer import get_cache_warm_status, start_tts_cache_warmer
 
 router = APIRouter(prefix="/api/cards", tags=["卡牌"])
 
@@ -309,9 +310,42 @@ async def get_local_card_tree(keyword: str | None = None, db: AsyncSession = Dep
             "category": card.category,
             "cycle": card.cycle,
             "mapping_status": card.mapping_status.value,
+            "is_double_sided": card.is_double_sided,
+            "pending_errata_count": 0,
+            "approved_errata_count": 0,
+            "latest_batch_id": None,
+            "errata_state": "正常",
             "local_files": [],
         })
         item["local_files"].append(LocalCardFileResponse.model_validate(file_record).model_dump())
+
+    if grouped:
+        errata_result = await db.execute(
+            select(
+                Errata.arkhamdb_id,
+                Errata.status,
+                func.count(Errata.id),
+                func.max(Errata.batch_id),
+            )
+            .where(Errata.arkhamdb_id.in_(grouped.keys()))
+            .where(Errata.status.in_([ErrataStatus.PENDING, ErrataStatus.APPROVED]))
+            .group_by(Errata.arkhamdb_id, Errata.status)
+        )
+        for arkhamdb_id, status, count, latest_batch_id in errata_result:
+            item = grouped.get(arkhamdb_id)
+            if not item:
+                continue
+            if status == ErrataStatus.PENDING:
+                item["pending_errata_count"] = count
+            elif status == ErrataStatus.APPROVED:
+                item["approved_errata_count"] = count
+                item["latest_batch_id"] = latest_batch_id
+
+        for item in grouped.values():
+            if item["pending_errata_count"] > 0:
+                item["errata_state"] = "勘误中"
+            elif item["approved_errata_count"] > 0:
+                item["errata_state"] = "待发布"
 
     tree: list[dict] = []
     category_map: dict[str, dict] = {}
@@ -334,6 +368,19 @@ async def get_local_card_tree(keyword: str | None = None, db: AsyncSession = Dep
         cycle_node["children"].append({"key": item["arkhamdb_id"], "title": title, "card": item})
 
     return {"tree": tree, "total": len(grouped)}
+
+
+@router.get("/cache/status")
+async def get_tts_cache_status():
+    """查看后台 TTS 卡图缓存预热状态。"""
+    return get_cache_warm_status()
+
+
+@router.post("/cache/warm")
+async def start_tts_cache_warm():
+    """手动启动后台 TTS 卡图缓存预热。"""
+    start_tts_cache_warmer()
+    return get_cache_warm_status()
 
 
 @router.get("/{arkhamdb_id}", response_model=CardDetailResponse)

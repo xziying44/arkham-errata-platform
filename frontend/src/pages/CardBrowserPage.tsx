@@ -1,24 +1,135 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { Key, ReactNode } from 'react';
+import { FolderOpenOutlined, FolderOutlined } from '@ant-design/icons';
 import { Button, Card, Empty, Input, Layout, message, Space, Spin, Tag, Tree, Typography } from 'antd';
 import type { DataNode } from 'antd/es/tree';
 import { fetchCardDetail, fetchCardTree, previewAllFaces } from '../api/cards';
 import { fetchCardFileContent, previewCard, submitErrata } from '../api/errata';
 import CardComparison from '../components/CardComparison';
 import JsonEditor from '../components/JsonEditor';
-import type { CardDetail, CardTreeNode, PreviewFace } from '../types';
+import type { CardDetail, CardTreeCard, CardTreeNode, PreviewFace } from '../types';
 
 const { Sider, Content } = Layout;
 const { Text, Title } = Typography;
+
+type TreeStats = {
+  total: number;
+  pending: number;
+  approved: number;
+};
+
+const cardListPanelStyle = {
+  padding: 14,
+  borderRadius: 14,
+  overflow: 'auto',
+  maxHeight: 'calc(100vh - 120px)',
+  border: '1px solid #e7edf5',
+  boxShadow: '0 10px 28px rgba(15, 23, 42, 0.08)',
+} satisfies React.CSSProperties;
 
 function collectLeafKeys(nodes: CardTreeNode[]): string[] {
   return nodes.flatMap((node) => node.children?.length ? collectLeafKeys(node.children) : [node.key]);
 }
 
-function toTreeData(nodes: CardTreeNode[]): DataNode[] {
+function collectExpandableKeys(nodes: CardTreeNode[]): string[] {
+  return nodes.flatMap((node) => node.children?.length ? [node.key, ...collectExpandableKeys(node.children)] : []);
+}
+
+function summarizeTree(nodes: CardTreeNode[]): TreeStats {
+  return nodes.reduce<TreeStats>((stats, node) => {
+    if (node.card) {
+      return {
+        total: stats.total + 1,
+        pending: stats.pending + (node.card.pending_errata_count > 0 ? 1 : 0),
+        approved: stats.approved + (node.card.pending_errata_count === 0 && node.card.approved_errata_count > 0 ? 1 : 0),
+      };
+    }
+    const childStats = summarizeTree(node.children || []);
+    return {
+      total: stats.total + childStats.total,
+      pending: stats.pending + childStats.pending,
+      approved: stats.approved + childStats.approved,
+    };
+  }, { total: 0, pending: 0, approved: 0 });
+}
+
+function errataTag(card: CardTreeCard) {
+  if (card.pending_errata_count > 0) {
+    return <Tag color="processing" style={{ marginInlineEnd: 0 }}>勘误 {card.pending_errata_count}</Tag>;
+  }
+  if (card.approved_errata_count > 0) {
+    return <Tag color="warning" style={{ marginInlineEnd: 0 }}>待发布 {card.approved_errata_count}</Tag>;
+  }
+  return <Tag color="success" style={{ marginInlineEnd: 0 }}>正常</Tag>;
+}
+
+function faceSummary(card: CardTreeCard) {
+  const faces = card.local_files.map((file) => file.face).sort();
+  if (!faces.length) return null;
+  return <Tag color="default" style={{ marginInlineEnd: 0 }}>{faces.join('/')}</Tag>;
+}
+
+function renderGroupTitle(
+  node: CardTreeNode,
+  expanded: boolean,
+  onToggle: (key: string) => void,
+): ReactNode {
+  const stats = summarizeTree(node.children || []);
+  return (
+    <div
+      onClick={(event) => {
+        event.stopPropagation();
+        onToggle(node.key);
+      }}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 8,
+        width: '100%',
+        padding: '6px 8px',
+        borderRadius: 10,
+        cursor: 'pointer',
+        background: expanded ? '#eef6ff' : 'transparent',
+      }}
+    >
+      <Space size={8} style={{ minWidth: 0 }}>
+        {expanded ? <FolderOpenOutlined style={{ color: '#1677ff' }} /> : <FolderOutlined style={{ color: '#64748b' }} />}
+        <Text strong ellipsis style={{ maxWidth: 148 }}>{node.title}</Text>
+      </Space>
+      <Space size={4} wrap>
+        <Tag color="default">{stats.total}</Tag>
+        {stats.pending > 0 && <Tag color="processing">勘误 {stats.pending}</Tag>}
+        {stats.approved > 0 && <Tag color="warning">待发布 {stats.approved}</Tag>}
+      </Space>
+    </div>
+  );
+}
+
+function renderCardTitle(card: CardTreeCard) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', minWidth: 0 }}>
+      <Tag color="geekblue" style={{ marginInlineEnd: 0, flex: '0 0 auto' }}>{card.arkhamdb_id}</Tag>
+      <Text strong ellipsis style={{ flex: '1 1 auto', minWidth: 0 }}>{card.name_zh || card.name_en || '未命名卡牌'}</Text>
+      <Space size={4} style={{ flex: '0 0 auto' }}>
+        {errataTag(card)}
+        {faceSummary(card)}
+        {card.latest_batch_id && <Tag color="gold" style={{ marginInlineEnd: 0 }}>包 {card.latest_batch_id}</Tag>}
+      </Space>
+    </div>
+  );
+}
+
+function toTreeData(
+  nodes: CardTreeNode[],
+  expandedKeys: Key[],
+  onToggle: (key: string) => void,
+): DataNode[] {
+  const expanded = new Set(expandedKeys.map(String));
   return nodes.map((node) => ({
     key: node.key,
-    title: node.card ? `${node.card.arkhamdb_id} ${node.card.name_zh || node.card.name_en}` : node.title,
-    children: node.children ? toTreeData(node.children) : undefined,
+    title: node.card ? renderCardTitle(node.card) : renderGroupTitle(node, expanded.has(node.key), onToggle),
+    children: node.children ? toTreeData(node.children, expandedKeys, onToggle) : undefined,
     isLeaf: Boolean(node.card),
   }));
 }
@@ -44,9 +155,14 @@ function ttsSideLabel(side?: string) {
   return '未绑定';
 }
 
+function withCacheBust(url?: string | null, cacheBust?: number) {
+  if (!url || !cacheBust) return url || null;
+  return `${url}${url.includes('?') ? '&' : '?'}t=${cacheBust}`;
+}
+
 export default function CardBrowserPage() {
   const [tree, setTree] = useState<CardTreeNode[]>([]);
-  const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
+  const [expandedKeys, setExpandedKeys] = useState<Key[]>([]);
   const [keyword, setKeyword] = useState('');
   const [treeLoading, setTreeLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -63,7 +179,7 @@ export default function CardBrowserPage() {
     try {
       const data = await fetchCardTree(search);
       setTree(data.tree);
-      if (search) setExpandedKeys(collectLeafKeys(data.tree));
+      if (search) setExpandedKeys(collectExpandableKeys(data.tree));
       if (!selectedId && data.tree.length > 0) {
         const firstLeaf = collectLeafKeys(data.tree)[0];
         if (firstLeaf) setSelectedId(String(firstLeaf));
@@ -80,34 +196,63 @@ export default function CardBrowserPage() {
     let cancelled = false;
     const loadDetail = async () => {
       setDetailLoading(true);
+      setDetail(null);
+      setFileContents({});
+      setModifiedJsonByFace({});
+      setPreviewFaces([]);
       try {
         const cardDetail = await fetchCardDetail(selectedId);
         if (cancelled) return;
         setDetail(cardDetail);
+        setSelectedFace(cardDetail.local_files[0]?.face || 'a');
+        setDetailLoading(false);
+
         const contents: Record<string, Record<string, unknown>> = {};
         const jsonByFace: Record<string, string> = {};
-        for (const file of cardDetail.local_files) {
-          const data = await fetchCardFileContent(selectedId, file.face);
-          if (cancelled) return;
-          contents[file.face] = data.content;
-          jsonByFace[file.face] = JSON.stringify(data.content, null, 2);
+        const fileResults = await Promise.allSettled(
+          cardDetail.local_files.map(async (file) => {
+            const data = await fetchCardFileContent(selectedId, file.face);
+            return { face: file.face, content: data.content };
+          }),
+        );
+        if (cancelled) return;
+        for (const result of fileResults) {
+          if (result.status === 'fulfilled') {
+            contents[result.value.face] = result.value.content;
+            jsonByFace[result.value.face] = JSON.stringify(result.value.content, null, 2);
+          }
         }
         setFileContents(contents);
         setModifiedJsonByFace(jsonByFace);
-        setSelectedFace(cardDetail.local_files[0]?.face || 'a');
-        const previews = await previewAllFaces(selectedId);
-        if (!cancelled) setPreviewFaces(previews.items);
+        if (fileResults.some((result) => result.status === 'rejected')) {
+          message.warning('部分 .card 文件读取失败，可稍后重试');
+        }
+
+        try {
+          const previews = await previewAllFaces(selectedId);
+          if (!cancelled) setPreviewFaces(previews.items);
+        } catch (e: any) {
+          if (!cancelled) {
+            message.warning(e?.response?.data?.detail || '本地预览仍在生成或暂时失败，不影响编辑');
+          }
+        }
       } catch (e: any) {
-        message.error(e?.response?.data?.detail || '加载卡牌失败');
-      } finally {
-        if (!cancelled) setDetailLoading(false);
+        if (!cancelled) {
+          message.error(e?.response?.data?.detail || '加载卡牌基础信息失败');
+          setDetailLoading(false);
+        }
       }
     };
     loadDetail();
     return () => { cancelled = true; };
   }, [selectedId]);
 
-  const treeData = useMemo(() => toTreeData(tree), [tree]);
+  const toggleExpandedKey = useCallback((key: string) => {
+    setExpandedKeys((keys) => keys.map(String).includes(key) ? keys.filter((item) => String(item) !== key) : [...keys, key]);
+  }, []);
+
+  const treeData = useMemo(() => toTreeData(tree, expandedKeys, toggleExpandedKey), [tree, expandedKeys, toggleExpandedKey]);
+  const treeStats = useMemo(() => summarizeTree(tree), [tree]);
   const currentJson = modifiedJsonByFace[selectedFace] || '';
   const previewMap = Object.fromEntries(previewFaces.map((item) => [item.face, item]));
   const faces = detail?.local_files.map((file) => file.face) ?? [];
@@ -128,7 +273,7 @@ export default function CardBrowserPage() {
     return [
       { key: `en-${primaryFace}-front`, title: `英文正面参考（${ttsSideLabel(englishMapping?.tts_side)}）`, url: englishMapping?.image_url || null, error: englishMapping?.status },
       { key: `zh-${primaryFace}-front`, title: `中文正面现状（${ttsSideLabel(chineseMapping?.tts_side)}）`, url: chineseMapping?.image_url || null, error: chineseMapping?.status },
-      { key: `preview-${primaryFace}-front`, title: '本地预发布正面', url: previewMap[primaryFace]?.preview_url || null, error: previewMap[primaryFace]?.error },
+      { key: `preview-${primaryFace}-front`, title: '本地预发布正面', url: withCacheBust(previewMap[primaryFace]?.preview_url, previewMap[primaryFace]?.cache_bust), error: previewMap[primaryFace]?.error },
       { key: `en-${primaryFace}-back`, title: '英文卡背参考（只读）', url: englishMapping?.tts_id ? `/api/cards/tts-images/${englishMapping.tts_id}/back` : null, error: englishMapping?.status },
       { key: `zh-${primaryFace}-back`, title: '中文卡背现状（只读）', url: chineseMapping?.tts_id ? `/api/cards/tts-images/${chineseMapping.tts_id}/back` : null, error: chineseMapping?.status },
       { key: `preview-${primaryFace}-back`, title: '本地预发布卡背', url: backOverride?.back_url || null, error: '请选择发布用卡背', footer: renderBackPresetStatus() },
@@ -139,7 +284,7 @@ export default function CardBrowserPage() {
     return [
       { key: `en-${face}`, title: `英文对齐图（本地${faceLabel(face)} → ${ttsSideLabel(englishMapping?.tts_side)}）`, url: englishMapping?.image_url || null, error: englishMapping?.status },
       { key: `zh-${face}`, title: `中文替换目标（跟随 ${ttsSideLabel(chineseMapping?.tts_side)}）`, url: chineseMapping?.image_url || null, error: chineseMapping?.status },
-      { key: `preview-${face}`, title: `本地预发布 ${faceLabel(face)}`, url: previewMap[face]?.preview_url || null, error: previewMap[face]?.error, footer: face === 'b' ? <Text type="secondary">双面卡背面由本地 .card 渲染，不需要卡背预设</Text> : undefined },
+      { key: `preview-${face}`, title: `本地预发布 ${faceLabel(face)}`, url: withCacheBust(previewMap[face]?.preview_url, previewMap[face]?.cache_bust), error: previewMap[face]?.error, footer: face === 'b' ? <Text type="secondary">双面卡背面由本地 .card 渲染，不需要卡背预设</Text> : undefined },
     ];
   });
 
@@ -151,9 +296,9 @@ export default function CardBrowserPage() {
       const data = await previewCard(`${selectedId}_${selectedFace}`, content);
       setPreviewFaces((items) => {
         const next = items.filter((item) => item.face !== selectedFace);
-        return [...next, { face: selectedFace, relative_path: '', preview_url: data.preview_url || data.preview_path, error: null }];
+        return [...next, { face: selectedFace, relative_path: '', preview_url: data.preview_url || data.preview_path, error: null, cache_bust: Date.now() }];
       });
-      message.success('当前面渲染成功');
+      message.success('当前面渲染成功，右侧本地预发布图已刷新');
     } catch (e: any) {
       message.error(e?.response?.data?.detail || e?.message || 'JSON 格式错误或渲染失败');
     } finally {
@@ -171,6 +316,7 @@ export default function CardBrowserPage() {
         modified_content: modified,
       });
       message.success('勘误已提交，等待审核');
+      await loadTree(keyword);
     } catch (e: any) {
       message.error(e?.response?.data?.detail || '提交失败');
     }
@@ -178,22 +324,40 @@ export default function CardBrowserPage() {
 
   return (
     <Layout style={{ minHeight: 'calc(100vh - 112px)', background: 'transparent' }}>
-      <Sider width={360} theme="light" style={{ padding: 12, borderRadius: 8, overflow: 'auto', maxHeight: 'calc(100vh - 120px)' }}>
-        <Space direction="vertical" style={{ width: '100%' }}>
+      <Sider width={430} theme="light" style={cardListPanelStyle}>
+        <Space direction="vertical" size={12} style={{ width: '100%' }}>
+          <Card size="small" styles={{ body: { padding: 12 } }} style={{ borderRadius: 12, background: 'linear-gradient(135deg, #f8fbff 0%, #eef6ff 100%)' }}>
+            <Space direction="vertical" size={8} style={{ width: '100%' }}>
+              <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                <Text strong>卡牌数据库</Text>
+                <Tag color="blue">{treeStats.total} 张</Tag>
+              </Space>
+              <Space size={4} wrap>
+                <Tag color="processing">勘误中 {treeStats.pending}</Tag>
+                <Tag color="warning">待发布 {treeStats.approved}</Tag>
+              </Space>
+            </Space>
+          </Card>
           <Input.Search
             placeholder="搜索内容、卡名、编号或文件名"
             allowClear
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             onSearch={(value) => loadTree(value)}
+            enterButton="搜索"
           />
-          <Button block onClick={() => loadTree(keyword)} loading={treeLoading}>刷新列表</Button>
+          <Space.Compact block>
+            <Button onClick={() => setExpandedKeys(collectExpandableKeys(tree))}>全部展开</Button>
+            <Button onClick={() => setExpandedKeys([])}>全部收起</Button>
+            <Button onClick={() => loadTree(keyword)} loading={treeLoading}>刷新</Button>
+          </Space.Compact>
           <Spin spinning={treeLoading}>
             <Tree
+              blockNode
               treeData={treeData}
               selectedKeys={selectedId ? [selectedId] : []}
               expandedKeys={expandedKeys}
-              onExpand={setExpandedKeys}
+              onExpand={(keys) => setExpandedKeys(keys)}
               onSelect={(keys) => {
                 const key = String(keys[0] || '');
                 if (key && findCard(tree, key)) setSelectedId(key);

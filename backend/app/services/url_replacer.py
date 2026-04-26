@@ -131,18 +131,69 @@ def extract_steam_urls_from_json(uploaded_json: dict) -> dict:
     return mapping
 
 
+def _replace_card_urls_in_data(data: dict, card_id: str, mapping: dict, mapping_index: dict) -> dict:
+    """返回替换 URL 后的新 TTS 卡牌 JSON 数据。"""
+    next_data = json.loads(json.dumps(data, ensure_ascii=False))
+    new_deck_key = mapping["deck_key"]
+    next_data["CardID"] = mapping["card_id"]
+
+    old_deck_key = (
+        list(next_data.get("CustomDeck", {}).keys())[0]
+        if next_data.get("CustomDeck")
+        else None
+    )
+    sheet = next_data["CustomDeck"].pop(old_deck_key, {}) if old_deck_key else {}
+    sheet["FaceURL"] = mapping["face_url"]
+    sheet["BackURL"] = mapping.get("back_url", sheet.get("BackURL", ""))
+    sheet["NumWidth"] = mapping.get("grid_w", sheet.get("NumWidth", 10))
+    sheet["NumHeight"] = mapping.get("grid_h", sheet.get("NumHeight", 1))
+    sheet["UniqueBack"] = mapping.get("unique_back", sheet.get("UniqueBack", False))
+    _apply_back_override(sheet, _back_override_for(mapping_index, card_id))
+    next_data["CustomDeck"] = {new_deck_key: sheet}
+    return next_data
+
+
+def export_chinese_card_url_replacements(
+    chinese_root: Path, output_root: Path, url_mapping: dict
+) -> list[str]:
+    """遍历中文卡牌目录，将替换后的 JSON 导出到 output_root，不修改官方仓库。"""
+    modified: list[str] = []
+    mapping_index = load_mapping_index()
+
+    for json_file in sorted(chinese_root.rglob("*.json")):
+        try:
+            data = json.loads(json_file.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            continue
+
+        if data.get("Name") != "Card":
+            continue
+
+        try:
+            gm = json.loads(data.get("GMNotes", "{}"))
+            card_id = gm.get("id", "")
+        except json.JSONDecodeError:
+            continue
+
+        if card_id not in url_mapping:
+            continue
+
+        relative_path = json_file.relative_to(chinese_root)
+        next_data = _replace_card_urls_in_data(data, card_id, url_mapping[card_id], mapping_index)
+        export_path = output_root / relative_path
+        export_path.parent.mkdir(parents=True, exist_ok=True)
+        export_path.write_text(
+            json.dumps(next_data, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        modified.append(str(relative_path))
+
+    return modified
+
+
 def replace_chinese_card_urls(
     chinese_root: Path, url_mapping: dict
 ) -> list[str]:
-    """遍历中文卡牌目录，替换 .card JSON 中的图片 URL
-
-    Args:
-        chinese_root: 中文卡牌 JSON 文件根目录
-        url_mapping: 从 extract_steam_urls_from_json 获取的 URL 映射表
-
-    Returns:
-        被修改的文件相对路径列表
-    """
+    """兼容旧调用：直接替换中文包。新发布流程不得调用此函数修改官方仓库。"""
     modified = []
     mapping_index = load_mapping_index()
 
@@ -164,29 +215,9 @@ def replace_chinese_card_urls(
         if card_id not in url_mapping:
             continue
 
-        mapping = url_mapping[card_id]
-        new_deck_key = mapping["deck_key"]
-
-        data["CardID"] = mapping["card_id"]
-
-        # 替换 CustomDeck 中的 URL
-        old_deck_key = (
-            list(data.get("CustomDeck", {}).keys())[0]
-            if data.get("CustomDeck")
-            else None
-        )
-        sheet = data["CustomDeck"].pop(old_deck_key, {}) if old_deck_key else {}
-
-        sheet["FaceURL"] = mapping["face_url"]
-        sheet["BackURL"] = mapping.get("back_url", sheet.get("BackURL", ""))
-        sheet["NumWidth"] = mapping.get("grid_w", sheet.get("NumWidth", 10))
-        sheet["NumHeight"] = mapping.get("grid_h", sheet.get("NumHeight", 1))
-        sheet["UniqueBack"] = mapping.get("unique_back", sheet.get("UniqueBack", False))
-        _apply_back_override(sheet, _back_override_for(mapping_index, card_id))
-        data["CustomDeck"] = {new_deck_key: sheet}
-
+        next_data = _replace_card_urls_in_data(data, card_id, url_mapping[card_id], mapping_index)
         json_file.write_text(
-            json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
+            json.dumps(next_data, ensure_ascii=False, indent=2), encoding="utf-8"
         )
         modified.append(str(json_file.relative_to(chinese_root)))
 

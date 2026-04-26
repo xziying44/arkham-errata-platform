@@ -103,8 +103,14 @@ export interface CardDetail {
   back_overrides: Record<string, CardBackOverride | null>;
 }
 
+export type CardErrataState = '正常' | '勘误中' | '待发布';
+
 export interface CardTreeCard extends CardIndex {
   local_files: LocalCardFile[];
+  pending_errata_count: number;
+  approved_errata_count: number;
+  latest_batch_id: string | null;
+  errata_state: CardErrataState;
 }
 
 export interface CardTreeNode {
@@ -124,6 +130,7 @@ export interface PreviewFace {
   relative_path: string;
   preview_url: string | null;
   error: string | null;
+  cache_bust?: number;
 }
 
 export interface PreviewAllResponse {

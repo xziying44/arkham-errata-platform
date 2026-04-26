@@ -398,3 +398,39 @@ def test_double_sided_card_rejects_back_override(monkeypatch):
 
     with pytest.raises(ValueError, match="只有单面卡需要设置卡背预设"):
         set_back_override("99002", "a", "player_card_back", "admin", is_single_sided=False)
+
+
+@pytest.mark.asyncio
+async def test_local_card_tree_includes_errata_review_state(client, db):
+    pending_card = CardIndex(arkhamdb_id="94001", name_zh="待审核卡", category="玩家卡", cycle="01_基础游戏")
+    approved_card = CardIndex(arkhamdb_id="94002", name_zh="待发布卡", category="玩家卡", cycle="01_基础游戏")
+    normal_card = CardIndex(arkhamdb_id="94003", name_zh="普通卡", category="玩家卡", cycle="01_基础游戏")
+    user_a = User(username="tree_user_a", password_hash="hash", role=UserRole.USER)
+    user_b = User(username="tree_user_b", password_hash="hash", role=UserRole.USER)
+    db.add_all([pending_card, approved_card, normal_card, user_a, user_b])
+    await db.flush()
+    db.add_all([
+        LocalCardFile(arkhamdb_id="94001", face="a", relative_path="玩家卡/01_基础游戏/94001_a.card", content_hash="hash-a", last_modified="0"),
+        LocalCardFile(arkhamdb_id="94002", face="a", relative_path="玩家卡/01_基础游戏/94002_a.card", content_hash="hash-b", last_modified="0"),
+        LocalCardFile(arkhamdb_id="94003", face="a", relative_path="玩家卡/01_基础游戏/94003_a.card", content_hash="hash-c", last_modified="0"),
+        Errata(arkhamdb_id="94001", user_id=user_a.id, original_content="{}", modified_content="{}", status=ErrataStatus.PENDING),
+        Errata(arkhamdb_id="94001", user_id=user_b.id, original_content="{}", modified_content="{}", status=ErrataStatus.PENDING),
+        Errata(arkhamdb_id="94002", user_id=user_a.id, original_content="{}", modified_content="{}", status=ErrataStatus.APPROVED, batch_id="batch-a"),
+    ])
+    await db.commit()
+
+    resp = await client.get("/api/cards/tree")
+
+    assert resp.status_code == 200
+    cards = {}
+    for category in resp.json()["tree"]:
+        for cycle in category["children"]:
+            for node in cycle["children"]:
+                cards[node["key"]] = node["card"]
+
+    assert cards["94001"]["errata_state"] == "勘误中"
+    assert cards["94001"]["pending_errata_count"] == 2
+    assert cards["94002"]["errata_state"] == "待发布"
+    assert cards["94002"]["approved_errata_count"] == 1
+    assert cards["94002"]["latest_batch_id"] == "batch-a"
+    assert cards["94003"]["errata_state"] == "正常"

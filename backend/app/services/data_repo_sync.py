@@ -19,9 +19,12 @@ class DataRepo:
 
 
 def configured_data_repos() -> list[DataRepo]:
-    """返回需要跟随远程强制同步的数据源仓库。"""
+    """返回需要跟随远程强制同步的官方只读数据源仓库。
+
+    卡牌数据库是系统维护的本地数据仓库，不能被定时任务强制重置；
+    arkham-card-maker 是渲染依赖，也不属于查询数据源。
+    """
     return [
-        DataRepo("卡牌数据库", settings.project_root / settings.local_card_db),
         DataRepo("SCED-downloads", settings.project_root / settings.sced_downloads),
         DataRepo("SCED", settings.project_root / settings.sced_repo),
     ]

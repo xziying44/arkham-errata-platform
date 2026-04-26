@@ -49,10 +49,10 @@ export async function step5UploadTTSJson(file: File) {
   return resp.data;
 }
 
-/** 第六步：根据 URL 映射替换中文卡图中的图片 URL */
-export async function step6ReplaceUrls(urlMapping: Record<string, unknown>) {
-  const resp = await client.post('/admin/publish/step6-replace-urls', { url_mapping: urlMapping });
-  return resp.data;
+/** 第六步：根据 URL 映射导出 SCED-downloads PR 补丁包 */
+export async function step6ExportReplacements(urlMapping: Record<string, unknown>) {
+  const resp = await client.post('/admin/publish/step6-export-replacements', { url_mapping: urlMapping }, { responseType: 'blob' });
+  return resp.data as Blob;
 }
 
 

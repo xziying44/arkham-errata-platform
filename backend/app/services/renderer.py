@@ -49,7 +49,12 @@ def render_card_preview(card_content: dict, output_dir: Path, filename: str) -> 
                     "encounter_groups_dir": str(settings.project_root.parent / "卡牌数据库" / "exported_icons")
                 }
                 renderer = CardRenderer(assets_path=assets_path or None, config=config)
-                options = RenderOptions(dpi=150, format="JPG", bleed=0)
+                options = RenderOptions(
+                    dpi=150,
+                    format="JPG",
+                    bleed=0,
+                    working_dir=str((settings.project_root / settings.local_card_db).resolve()),
+                )
                 result = renderer.render(str(temp_card), options)
 
         output_path = output_dir / f"{filename}.jpg"

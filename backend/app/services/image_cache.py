@@ -36,13 +36,23 @@ def download_and_cut_sheet(
     except Exception:
         return None
 
-    x1, y1, x2, y2 = calc_grid_coords(grid_position, grid_width)
-    if x1 >= sheet_img.width or y1 >= sheet_img.height:
+    if sheet_img.width <= CARD_W and sheet_img.height <= CARD_H:
         card_img = sheet_img.copy()
     else:
-        x2 = min(x2, sheet_img.width)
-        y2 = min(y2, sheet_img.height)
-        card_img = sheet_img.crop((x1, y1, x2, y2))
+        cell_w = sheet_img.width / max(grid_width, 1)
+        cell_h = sheet_img.height / max(grid_height, 1)
+        row = grid_position // max(grid_width, 1)
+        col = grid_position % max(grid_width, 1)
+        x1 = round(col * cell_w)
+        y1 = round(row * cell_h)
+        x2 = round((col + 1) * cell_w)
+        y2 = round((row + 1) * cell_h)
+        if x1 >= sheet_img.width or y1 >= sheet_img.height:
+            card_img = sheet_img.copy()
+        else:
+            card_img = sheet_img.crop((x1, y1, min(x2, sheet_img.width), min(y2, sheet_img.height)))
+            if card_img.size != (CARD_W, CARD_H):
+                card_img = card_img.resize((CARD_W, CARD_H), Image.Resampling.LANCZOS)
     if card_img.mode not in {"RGB", "L"}:
         card_img = card_img.convert("RGB")
     expected_path.parent.mkdir(parents=True, exist_ok=True)
