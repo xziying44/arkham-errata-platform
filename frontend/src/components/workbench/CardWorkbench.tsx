@@ -162,6 +162,19 @@ function withCacheBust(url?: string | null, cacheBust?: number) {
   return `${url}${url.includes('?') ? '&' : '?'}t=${cacheBust}`;
 }
 
+const horizontalCardTypes = new Set([
+  '调查员',
+  '调查员卡',
+  '调查员背面',
+  '调查员卡背',
+  '场景卡',
+  '场景卡背',
+  '场景卡-大画',
+  '密谋卡',
+  '密谋卡背',
+  '密谋卡-大画',
+]);
+
 interface CardWorkbenchProps {
   mode: WorkbenchMode;
   packageId?: number;
@@ -306,6 +319,24 @@ export default function CardWorkbench({ mode, packageId }: CardWorkbenchProps) {
   const primaryFace = faces[0] || 'a';
   const backOverride = detail?.back_overrides?.[primaryFace] || null;
 
+  const cardContentForFace = (face: string) => {
+    const json = modifiedJsonByFace[face];
+    if (json) {
+      try {
+        return JSON.parse(json) as Record<string, unknown>;
+      } catch {
+        return fileContents[face] || {};
+      }
+    }
+    return fileContents[face] || {};
+  };
+
+  const isHorizontalFace = (face: string) => {
+    const content = cardContentForFace(face);
+    const cardType = typeof content.type === 'string' ? content.type : '';
+    return horizontalCardTypes.has(cardType);
+  };
+
   const renderBackPresetStatus = () => (
     <Space direction="vertical" size={4} style={{ width: '100%' }}>
       <Text type="secondary">卡背设置仅在映射管理中维护；这里展示预发布结果</Text>
@@ -316,21 +347,23 @@ export default function CardWorkbench({ mode, packageId }: CardWorkbenchProps) {
   const imageSlots = isSingleSided && primaryFace ? (() => {
     const englishMapping = detail?.image_mappings.find((item) => item.local_face === primaryFace && item.source === '英文');
     const chineseMapping = detail?.image_mappings.find((item) => item.local_face === primaryFace && item.source === '中文');
+    const horizontal = isHorizontalFace(primaryFace);
     return [
-      { key: `en-${primaryFace}-front`, title: `英文正面参考（${ttsSideLabel(englishMapping?.tts_side)}）`, url: englishMapping?.image_url || null, error: englishMapping?.status },
-      { key: `zh-${primaryFace}-front`, title: `中文正面现状（${ttsSideLabel(chineseMapping?.tts_side)}）`, url: chineseMapping?.image_url || null, error: chineseMapping?.status },
-      { key: `preview-${primaryFace}-front`, title: '本地预发布正面', url: withCacheBust(previewMap[primaryFace]?.preview_url, previewMap[primaryFace]?.cache_bust), error: previewMap[primaryFace]?.error },
-      { key: `en-${primaryFace}-back`, title: '英文卡背参考（只读）', url: englishMapping?.tts_id ? `/api/cards/tts-images/${englishMapping.tts_id}/back` : null, error: englishMapping?.status },
-      { key: `zh-${primaryFace}-back`, title: '中文卡背现状（只读）', url: chineseMapping?.tts_id ? `/api/cards/tts-images/${chineseMapping.tts_id}/back` : null, error: chineseMapping?.status },
+      { key: `en-${primaryFace}-front`, title: `英文正面参考（${ttsSideLabel(englishMapping?.tts_side)}）`, url: englishMapping?.image_url || null, error: englishMapping?.status, horizontal, rotateCounterClockwise: horizontal },
+      { key: `zh-${primaryFace}-front`, title: `中文正面现状（${ttsSideLabel(chineseMapping?.tts_side)}）`, url: chineseMapping?.image_url || null, error: chineseMapping?.status, horizontal, rotateCounterClockwise: horizontal },
+      { key: `preview-${primaryFace}-front`, title: '本地预发布正面', url: withCacheBust(previewMap[primaryFace]?.preview_url, previewMap[primaryFace]?.cache_bust), error: previewMap[primaryFace]?.error, horizontal },
+      { key: `en-${primaryFace}-back`, title: '英文卡背参考（只读）', url: englishMapping?.tts_id ? `/api/cards/tts-images/${englishMapping.tts_id}/back` : null, error: englishMapping?.status, horizontal, rotateCounterClockwise: horizontal },
+      { key: `zh-${primaryFace}-back`, title: '中文卡背现状（只读）', url: chineseMapping?.tts_id ? `/api/cards/tts-images/${chineseMapping.tts_id}/back` : null, error: chineseMapping?.status, horizontal, rotateCounterClockwise: horizontal },
       { key: `preview-${primaryFace}-back`, title: '本地预发布卡背', url: backOverride?.back_url || null, error: '请选择发布用卡背', footer: renderBackPresetStatus() },
     ];
   })() : faces.flatMap((face) => {
     const englishMapping = detail?.image_mappings.find((item) => item.local_face === face && item.source === '英文');
     const chineseMapping = detail?.image_mappings.find((item) => item.local_face === face && item.source === '中文');
+    const horizontal = isHorizontalFace(face);
     return [
-      { key: `en-${face}`, title: `英文对齐图（本地${faceLabel(face)} → ${ttsSideLabel(englishMapping?.tts_side)}）`, url: englishMapping?.image_url || null, error: englishMapping?.status },
-      { key: `zh-${face}`, title: `中文替换目标（跟随 ${ttsSideLabel(chineseMapping?.tts_side)}）`, url: chineseMapping?.image_url || null, error: chineseMapping?.status },
-      { key: `preview-${face}`, title: `本地预发布 ${faceLabel(face)}`, url: withCacheBust(previewMap[face]?.preview_url, previewMap[face]?.cache_bust), error: previewMap[face]?.error, footer: face === 'b' ? <Text type="secondary">双面卡背面由本地 .card 渲染，不需要卡背预设</Text> : undefined },
+      { key: `en-${face}`, title: `英文对齐图（本地${faceLabel(face)} → ${ttsSideLabel(englishMapping?.tts_side)}）`, url: englishMapping?.image_url || null, error: englishMapping?.status, horizontal, rotateCounterClockwise: horizontal },
+      { key: `zh-${face}`, title: `中文替换目标（跟随 ${ttsSideLabel(chineseMapping?.tts_side)}）`, url: chineseMapping?.image_url || null, error: chineseMapping?.status, horizontal, rotateCounterClockwise: horizontal },
+      { key: `preview-${face}`, title: `本地预发布 ${faceLabel(face)}`, url: withCacheBust(previewMap[face]?.preview_url, previewMap[face]?.cache_bust), error: previewMap[face]?.error, horizontal, footer: face === 'b' ? <Text type="secondary">双面卡背面由本地 .card 渲染，不需要卡背预设</Text> : undefined },
     ];
   });
 
