@@ -10,6 +10,7 @@ import {
 } from '../api/admin';
 import { fetchPackages, unlockPackage } from '../api/packages';
 import type { ErrataPackage } from '../types';
+import CardWorkbench from '../components/workbench/CardWorkbench';
 
 /** 发布管理页面：六步发布流程 */
 export default function PublishPage() {
@@ -21,6 +22,8 @@ export default function PublishPage() {
   const [urlMapping, setUrlMapping] = useState<Record<string, unknown> | null>(null);
   const [exportedPatch, setExportedPatch] = useState(false);
   const [loading, setLoading] = useState(false);
+  const selectedPackageId = batchId ? Number(batchId) : null;
+  const selectedPackage = packages.find((item) => item.id === selectedPackageId) || null;
 
   const loadPackages = async () => {
     try {
@@ -217,13 +220,23 @@ export default function PublishPage() {
   ];
 
   return (
-    <Card title="发布管理">
-      <Steps
-        current={current}
-        items={steps.map((s) => ({ title: s.title }))}
-        style={{ marginBottom: 32 }}
-      />
-      <Card>{steps[current].content}</Card>
-    </Card>
+    <Space direction="vertical" size={16} style={{ width: '100%' }}>
+      <Card title="发布管理">
+        <Steps
+          current={current}
+          items={steps.map((s) => ({ title: s.title }))}
+          style={{ marginBottom: 32 }}
+        />
+        <Card>{steps[current].content}</Card>
+      </Card>
+      {selectedPackageId && selectedPackage && (
+        <Card
+          title={`发布前审阅：${selectedPackage.package_no}`}
+          extra={<Tag color={selectedPackage.status === '待发布' ? 'warning' : 'default'}>{selectedPackage.status}</Tag>}
+        >
+          <CardWorkbench mode="package-review" packageId={selectedPackageId} />
+        </Card>
+      )}
+    </Space>
   );
 }
