@@ -22,6 +22,7 @@ from app.services.url_replacer import (
 from app.services.renderer import render_card_preview
 from app.config import settings
 from app.schemas.publish import PublishDirectoryPresetUpdateRequest, PublishSessionCreateRequest
+from app.services.publish_package_builder import build_replacement_plan
 from app.services.publish_sessions import add_artifact, create_publish_session, list_session_artifacts, load_publish_session, supersede_artifacts_after_step
 
 router = APIRouter(prefix="/api/admin/publish", tags=["发布"])
@@ -199,6 +200,48 @@ async def generate_session_sheets(
     await db.commit()
     await db.refresh(session)
     return await serialize_publish_session(db, session)
+
+
+@router.get("/sessions/{session_id}/replacement-preview")
+async def get_replacement_preview(
+    session_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    session = await load_publish_session(db, session_id)
+    _package, drafts = await load_publish_package(
+        db, session.package_id, {ErrataPackageStatus.WAITING_PUBLISH, ErrataPackageStatus.PUBLISHING}
+    )
+    artifacts = await list_session_artifacts(db, session.id)
+    url_artifact = next(
+        (
+            artifact
+            for artifact in artifacts
+            if artifact.kind == PublishArtifactKind.URL_MAPPING
+            and artifact.status in {PublishArtifactStatus.ACTIVE, PublishArtifactStatus.CONFIRMED}
+        ),
+        None,
+    )
+    url_mapping = url_artifact.artifact_metadata.get("url_mapping", {}) if url_artifact else {}
+    roots = [
+        (
+            "decomposed/language-pack/Simplified Chinese - Campaigns",
+            settings.project_root
+            / settings.sced_downloads
+            / "decomposed"
+            / "language-pack"
+            / "Simplified Chinese - Campaigns",
+        ),
+        (
+            "decomposed/language-pack/Simplified Chinese - Player Cards",
+            settings.project_root
+            / settings.sced_downloads
+            / "decomposed"
+            / "language-pack"
+            / "Simplified Chinese - Player Cards",
+        ),
+    ]
+    return {"items": build_replacement_plan(roots, build_approved_cards_from_package(drafts), url_mapping)}
 
 
 async def load_publish_package(
