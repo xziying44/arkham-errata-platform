@@ -27,26 +27,30 @@ export default function CardComparison({ images }: Props) {
           <Col span={8} key={item.key}>
             <Card size="small" bodyStyle={{ padding: 8, textAlign: 'center' }}>
               <Text strong>{item.title}</Text>
-              <div
-                style={{
-                  marginTop: 8,
-                  minHeight: item.horizontal ? 340 : 260,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  overflow: 'hidden',
-                }}
-              >
+              <div style={{ marginTop: 8, minHeight: 320, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {item.url ? (
-                  <Image
-                    src={item.url}
+                  <div
                     style={{
-                      width: item.horizontal ? '82%' : '50%',
-                      minWidth: item.horizontal ? 260 : 160,
-                      maxWidth: item.horizontal ? 440 : 260,
-                      transform: item.rotateCounterClockwise ? 'rotate(-90deg)' : undefined,
+                      width: 360,
+                      height: 260,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      overflow: 'hidden',
                     }}
-                  />
+                  >
+                    <Image
+                      src={item.url}
+                      preview={{ src: item.url }}
+                      style={{
+                        width: item.rotateCounterClockwise ? 260 : 360,
+                        height: item.rotateCounterClockwise ? 360 : 260,
+                        maxWidth: 'none',
+                        objectFit: 'contain',
+                        transform: item.rotateCounterClockwise ? 'rotate(-90deg)' : undefined,
+                      }}
+                    />
+                  </div>
                 ) : (
                   <Empty description={item.error || '暂无图片'} />
                 )}
