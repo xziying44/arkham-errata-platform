@@ -204,14 +204,15 @@ export default function CardWorkbench({ mode, packageId }: CardWorkbenchProps) {
       const data = await fetchCardTree({ keyword: search, scope: scopeForMode(mode), package_id: packageId });
       setTree(data.tree);
       if (search) setExpandedKeys(collectExpandableKeys(data.tree));
-      if (!selectedId && data.tree.length > 0) {
+      setSelectedId((currentSelectedId) => {
+        if (currentSelectedId || data.tree.length === 0) return currentSelectedId;
         const firstLeaf = collectLeafKeys(data.tree)[0];
-        if (firstLeaf) setSelectedId(String(firstLeaf));
-      }
+        return firstLeaf ? String(firstLeaf) : currentSelectedId;
+      });
     } finally {
       setTreeLoading(false);
     }
-  }, [selectedId, mode, packageId]);
+  }, [mode, packageId]);
 
   useEffect(() => { loadTree(); }, [loadTree]);
 
