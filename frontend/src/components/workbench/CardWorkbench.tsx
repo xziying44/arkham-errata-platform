@@ -7,6 +7,7 @@ import { fetchCardDetail, fetchCardTree, previewAllFaces } from '../../api/cards
 import { fetchCardFileContent, previewCard } from '../../api/errata';
 import CardComparison from '../CardComparison';
 import JsonEditor from '../JsonEditor';
+import CardTextFieldsEditor from './CardTextFieldsEditor';
 import type { CardDetail, CardTreeCard, CardTreeNode, ErrataAuditLog, ErrataDraft, PreviewFace, WorkbenchMode } from '../../types';
 import { cancelErrataDraft, fetchErrataDraft, fetchErrataDraftLogs, saveErrataDraft } from '../../api/errataDrafts';
 import { createReviewPackage } from '../../api/packages';
@@ -246,7 +247,6 @@ export default function CardWorkbench({ mode, packageId }: CardWorkbenchProps) {
         if (cancelled) return;
         setDetail(cardDetail);
         setSelectedFace(cardDetail.local_files[0]?.face || 'a');
-        setDetailLoading(false);
 
         const contents: Record<string, Record<string, unknown>> = {};
         const jsonByFace: Record<string, string> = {};
@@ -277,6 +277,7 @@ export default function CardWorkbench({ mode, packageId }: CardWorkbenchProps) {
         }
         setFileContents(contents);
         setModifiedJsonByFace(currentJsonByFace);
+        setDetailLoading(false);
         try {
           const logs = await fetchErrataDraftLogs(selectedId);
           if (!cancelled) setAuditLogs(logs);
@@ -366,6 +367,10 @@ export default function CardWorkbench({ mode, packageId }: CardWorkbenchProps) {
       { key: `preview-${face}`, title: `本地预发布 ${faceLabel(face)}`, url: withCacheBust(previewMap[face]?.preview_url, previewMap[face]?.cache_bust), error: previewMap[face]?.error, horizontal, footer: face === 'b' ? <Text type="secondary">双面卡背面由本地 .card 渲染，不需要卡背预设</Text> : undefined },
     ];
   });
+
+  const handleUpdateFaceJson = useCallback((face: string, value: string) => {
+    setModifiedJsonByFace((prev) => ({ ...prev, [face]: value }));
+  }, []);
 
   const handleRenderSelected = async () => {
     if (!selectedId || !currentJson) return;
@@ -471,7 +476,7 @@ export default function CardWorkbench({ mode, packageId }: CardWorkbenchProps) {
             </Space>
           </Card>
           <Input.Search
-            placeholder="搜索内容、卡名、编号或文件名"
+            placeholder="搜索卡名、编号、文件名、内容或遭遇组"
             allowClear
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
@@ -541,10 +546,15 @@ export default function CardWorkbench({ mode, packageId }: CardWorkbenchProps) {
                 </Space>
               }
             >
+              <CardTextFieldsEditor
+                selectedFace={selectedFace}
+                jsonByFace={modifiedJsonByFace}
+                onFaceJsonChange={handleUpdateFaceJson}
+              />
               <JsonEditor
                 value={currentJson}
-                onChange={(value) => setModifiedJsonByFace((prev) => ({ ...prev, [selectedFace]: value }))}
-                height="520px"
+                onChange={(value) => handleUpdateFaceJson(selectedFace, value)}
+                height="360px"
               />
             </Card>
             {auditLogs.length > 0 && (

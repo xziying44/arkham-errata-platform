@@ -1,5 +1,6 @@
 """卡牌 API：初始化编排、浏览、详情、筛选"""
 
+import json
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -311,13 +312,16 @@ async def get_local_card_tree(
     current_user: User | None = Depends(optional_current_user),
 ):
     """按卡牌数据库目录组织卡牌树，仅包含存在本地 .card 文件的卡牌。"""
-    query = (
+    base_query = (
         select(CardIndex, LocalCardFile)
         .join(LocalCardFile, LocalCardFile.arkhamdb_id == CardIndex.arkhamdb_id)
     )
-    if keyword:
-        pattern = f"%{keyword}%"
-        query = query.where(
+    normalized_keyword = keyword.strip().lower() if keyword else ""
+    order_columns = (CardIndex.category, CardIndex.cycle, CardIndex.arkhamdb_id, LocalCardFile.face)
+
+    if normalized_keyword:
+        pattern = f"%{keyword.strip()}%"
+        db_query = base_query.where(
             or_(
                 CardIndex.arkhamdb_id.ilike(pattern),
                 CardIndex.name_zh.ilike(pattern),
@@ -325,8 +329,21 @@ async def get_local_card_tree(
                 LocalCardFile.relative_path.ilike(pattern),
             )
         )
-    query = query.order_by(CardIndex.category, CardIndex.cycle, CardIndex.arkhamdb_id, LocalCardFile.face)
-    rows = (await db.execute(query)).all()
+        rows = list((await db.execute(db_query.order_by(*order_columns))).all())
+        seen = {(card.arkhamdb_id, file_record.relative_path) for card, file_record in rows}
+
+        encounter_rows = (await db.execute(base_query.order_by(*order_columns))).all()
+        for card, file_record in encounter_rows:
+            row_key = (card.arkhamdb_id, file_record.relative_path)
+            if row_key in seen:
+                continue
+            content = load_card_content(settings.project_root / settings.local_card_db, file_record.relative_path) or {}
+            content_text = json.dumps(content, ensure_ascii=False).lower()
+            if normalized_keyword in content_text:
+                rows.append((card, file_record))
+                seen.add(row_key)
+    else:
+        rows = list((await db.execute(base_query.order_by(*order_columns))).all())
 
     grouped: dict[str, dict] = {}
     for card, file_record in rows:
@@ -358,20 +375,22 @@ async def get_local_card_tree(
         )
         drafts = {draft.arkhamdb_id: draft for draft in draft_result.scalars().all()}
 
-        audit_result = await db.execute(
-            select(ErrataAuditLog.arkhamdb_id, User.username, func.max(ErrataAuditLog.created_at))
-            .join(User, User.id == ErrataAuditLog.user_id)
-            .where(ErrataAuditLog.arkhamdb_id.in_(grouped.keys()))
-            .group_by(ErrataAuditLog.arkhamdb_id, User.username)
-        )
+        active_draft_ids = [draft.id for draft in drafts.values()]
         participants: dict[str, list[str]] = {}
         latest_audit: dict[str, str] = {}
-        for arkhamdb_id, username, created_at in audit_result:
-            participants.setdefault(arkhamdb_id, []).append(username)
-            current_latest = latest_audit.get(arkhamdb_id)
-            created_at_text = created_at.isoformat() if created_at else None
-            if created_at_text and (current_latest is None or created_at_text > current_latest):
-                latest_audit[arkhamdb_id] = created_at_text
+        if active_draft_ids:
+            audit_result = await db.execute(
+                select(ErrataAuditLog.arkhamdb_id, User.username, func.max(ErrataAuditLog.created_at))
+                .join(User, User.id == ErrataAuditLog.user_id)
+                .where(ErrataAuditLog.draft_id.in_(active_draft_ids))
+                .group_by(ErrataAuditLog.arkhamdb_id, User.username)
+            )
+            for arkhamdb_id, username, created_at in audit_result:
+                participants.setdefault(arkhamdb_id, []).append(username)
+                current_latest = latest_audit.get(arkhamdb_id)
+                created_at_text = created_at.isoformat() if created_at else None
+                if created_at_text and (current_latest is None or created_at_text > current_latest):
+                    latest_audit[arkhamdb_id] = created_at_text
 
         for arkhamdb_id, item in grouped.items():
             draft = drafts.get(arkhamdb_id)
@@ -391,7 +410,11 @@ async def get_local_card_tree(
             grouped = {}
         else:
             mine_result = await db.execute(
-                select(ErrataAuditLog.arkhamdb_id).where(ErrataAuditLog.user_id == current_user.id).distinct()
+                select(ErrataAuditLog.arkhamdb_id)
+                .join(ErrataDraft, ErrataDraft.id == ErrataAuditLog.draft_id)
+                .where(ErrataAuditLog.user_id == current_user.id)
+                .where(ErrataDraft.archived_at.is_(None))
+                .distinct()
             )
             mine_ids = set(mine_result.scalars().all())
             grouped = {arkhamdb_id: item for arkhamdb_id, item in grouped.items() if arkhamdb_id in mine_ids}

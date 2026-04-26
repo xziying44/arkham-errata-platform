@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -196,6 +197,87 @@ async def test_local_card_tree_filters_by_filename(client, db):
     assert resp.status_code == 200
     text = json.dumps(resp.json(), ensure_ascii=False)
     assert "91003" in text
+
+
+@pytest.mark.asyncio
+async def test_local_card_tree_filters_by_card_content(client, db, monkeypatch):
+    card = CardIndex(arkhamdb_id="91006", name_zh="遭遇组搜索", category="剧本卡", cycle="09_绯红密钥")
+    db.add(card)
+    await db.flush()
+    db.add(LocalCardFile(
+        arkhamdb_id="91006",
+        face="a",
+        relative_path="剧本卡/09_绯红密钥/91006_a.card",
+        content_hash="hash",
+        last_modified="0",
+    ))
+    await db.commit()
+
+    def fake_load_card_content(root, relative_path, include_picture=False):
+        return {
+            "name": "遭遇组搜索",
+            "encounter_group": "crimson_conspiracy",
+            "body": "只有正文里出现的检索词",
+        }
+
+    monkeypatch.setattr("app.api.cards.load_card_content", fake_load_card_content)
+
+    encounter_resp = await client.get("/api/cards/tree", params={"keyword": "crimson_conspiracy"})
+    content_resp = await client.get("/api/cards/tree", params={"keyword": "检索词"})
+
+    assert encounter_resp.status_code == 200
+    assert content_resp.status_code == 200
+    assert "91006" in json.dumps(encounter_resp.json(), ensure_ascii=False)
+    assert "91006" in json.dumps(content_resp.json(), ensure_ascii=False)
+
+
+@pytest.mark.asyncio
+async def test_my_errata_tree_excludes_archived_normal_cards(client, db):
+    active_card = CardIndex(arkhamdb_id="94011", name_zh="我的当前勘误", category="玩家卡", cycle="01_基础游戏")
+    archived_card = CardIndex(arkhamdb_id="94012", name_zh="我的已取消勘误", category="玩家卡", cycle="01_基础游戏")
+    user = User(username="mine_scope_user", password_hash=hash_password("123456"), role=UserRole.ERRATA)
+    db.add_all([active_card, archived_card, user])
+    await db.flush()
+
+    active_draft = ErrataDraft(
+        arkhamdb_id="94011",
+        status=ErrataDraftStatus.ERRATA,
+        original_faces={},
+        modified_faces={"a": {}},
+        changed_faces=["a"],
+        created_by=user.id,
+        updated_by=user.id,
+    )
+    archived_draft = ErrataDraft(
+        arkhamdb_id="94012",
+        status=ErrataDraftStatus.ARCHIVED,
+        original_faces={},
+        modified_faces={"a": {}},
+        changed_faces=["a"],
+        created_by=user.id,
+        updated_by=user.id,
+        archived_at=datetime.now(),
+    )
+    db.add_all([
+        LocalCardFile(arkhamdb_id="94011", face="a", relative_path="玩家卡/01_基础游戏/94011_a.card", content_hash="hash-a", last_modified="0"),
+        LocalCardFile(arkhamdb_id="94012", face="a", relative_path="玩家卡/01_基础游戏/94012_a.card", content_hash="hash-b", last_modified="0"),
+        active_draft,
+        archived_draft,
+    ])
+    await db.flush()
+    db.add_all([
+        ErrataAuditLog(draft_id=active_draft.id, arkhamdb_id="94011", user_id=user.id, action=ErrataAuditAction.SAVE, changed_faces=["a"]),
+        ErrataAuditLog(draft_id=archived_draft.id, arkhamdb_id="94012", user_id=user.id, action=ErrataAuditAction.CANCEL, changed_faces=["a"]),
+    ])
+    await db.commit()
+
+    token = await _login(client, "mine_scope_user")
+    resp = await client.get("/api/cards/tree", params={"scope": "mine"}, headers={"Authorization": f"Bearer {token}"})
+
+    assert resp.status_code == 200
+    text = json.dumps(resp.json(), ensure_ascii=False)
+    assert "94011" in text
+    assert "94012" not in text
 
 
 @pytest.mark.asyncio
