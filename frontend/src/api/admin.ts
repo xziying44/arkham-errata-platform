@@ -1,5 +1,5 @@
 import client from './client';
-import type { CardBackPreset, MappingDetail, TTSCardImage } from '../types';
+import type { CardBackPreset, MappingDetail, PublishDirectoryPreset, PublishSession, ReplacementPreviewItem, TTSCardImage } from '../types';
 
 /** 获取待审核的勘误列表 */
 export async function fetchPendingReviews() {
@@ -98,5 +98,31 @@ export async function setBackOverride(arkhamdbId: string, face: string, presetKe
 
 export async function clearBackOverride(arkhamdbId: string, face: string): Promise<MappingDetail> {
   const resp = await client.delete(`/admin/mapping/${arkhamdbId}/faces/${face}/back-override`);
+  return resp.data;
+}
+
+
+export async function createPublishSession(packageId: number): Promise<PublishSession> {
+  const resp = await client.post('/admin/publish/sessions', { package_id: packageId });
+  return resp.data;
+}
+
+export async function fetchPublishSession(sessionId: number): Promise<PublishSession> {
+  const resp = await client.get(`/admin/publish/sessions/${sessionId}`);
+  return resp.data;
+}
+
+export async function generateSessionSheets(sessionId: number): Promise<PublishSession> {
+  const resp = await client.post(`/admin/publish/sessions/${sessionId}/generate-sheets`);
+  return resp.data;
+}
+
+export async function fetchReplacementPreview(sessionId: number): Promise<{ items: ReplacementPreviewItem[] }> {
+  const resp = await client.get(`/admin/publish/sessions/${sessionId}/replacement-preview`);
+  return resp.data;
+}
+
+export async function fetchDirectoryPresets(): Promise<{ items: PublishDirectoryPreset[] }> {
+  const resp = await client.get('/admin/publish/directory-presets');
   return resp.data;
 }

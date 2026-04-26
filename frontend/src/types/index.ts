@@ -203,3 +203,55 @@ export interface MappingDetail {
   confirmed_at: string | null;
   index_path: string;
 }
+
+export interface PublishArtifact {
+  id: number;
+  session_id: number;
+  kind: string;
+  status: string;
+  path: string;
+  public_url: string | null;
+  checksum: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PublishSession {
+  id: number;
+  package_id: number;
+  status: string;
+  current_step: string;
+  artifact_root: string;
+  error_message: string | null;
+  cleanup_at: string | null;
+  created_at: string;
+  updated_at: string;
+  artifacts: PublishArtifact[];
+}
+
+export interface ReplacementPreviewItem {
+  arkhamdb_id: string;
+  name_zh: string;
+  action: '替换' | '新增';
+  source_path: string | null;
+  target_path: string | null;
+  old_face_url: string;
+  old_back_url: string;
+  new_face_url: string;
+  new_back_url: string;
+  blocking_errors: string[];
+}
+
+export interface PublishDirectoryPreset {
+  id: number;
+  local_dir_prefix: string;
+  target_area: 'campaigns' | 'player_cards';
+  target_bag_path: string;
+  target_bag_guid: string;
+  target_object_dir: string;
+  label: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
