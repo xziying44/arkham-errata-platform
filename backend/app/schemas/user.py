@@ -13,7 +13,16 @@ class LoginResponse(BaseModel):
 class CreateUserRequest(BaseModel):
     username: str
     password: str
-    role: str = "用户"
+    role: str = "勘误员"
+
+
+class UpdateUserRequest(BaseModel):
+    role: str | None = None
+    is_active: bool | None = None
+
+
+class ResetPasswordRequest(BaseModel):
+    password: str
 
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)

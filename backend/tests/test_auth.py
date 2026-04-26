@@ -24,7 +24,7 @@ async def test_login_wrong_password(client: AsyncClient, db):
 
 @pytest.mark.asyncio
 async def test_create_user_duplicate(client: AsyncClient, db):
-    user = User(username="editor1", password_hash="hash", role=UserRole.USER)
+    user = User(username="editor1", password_hash="hash", role=UserRole.ERRATA)
     admin = User(username="duplicate_admin", password_hash=hash_password("123456"), role=UserRole.ADMIN)
     db.add_all([user, admin])
     await db.commit()
@@ -69,7 +69,7 @@ async def test_admin_can_create_user_and_list_users(client: AsyncClient, db):
 
     create_resp = await client.post(
         "/api/auth/users",
-        json={"username": "created_by_admin", "password": "pass", "role": "用户"},
+        json={"username": "created_by_admin", "password": "pass", "role": "勘误员"},
         headers=headers,
     )
     assert create_resp.status_code == 200
