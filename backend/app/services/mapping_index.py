@@ -39,10 +39,15 @@ def tts_candidate_priority(tts: TTSCardImage) -> tuple[int, int, int, str]:
     is_promo = "promo" in path.lower() or "parallel" in path.lower()
     return (1 if is_nested_state else 0, 1 if is_promo else 0, tts.id or 0, path)
 
-def _index_path() -> Path:
-    path = settings.project_root / "data" / "mapping_index.json"
+def get_mapping_index_path() -> Path:
+    """返回由卡牌数据库仓库版本管理的映射索引路径。"""
+    path = (settings.project_root / settings.local_card_db / "mapping_index.json").resolve()
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
+
+
+def _index_path() -> Path:
+    return get_mapping_index_path()
 
 
 def _empty_index() -> dict[str, Any]:

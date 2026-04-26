@@ -18,7 +18,7 @@ from app.config import settings
 from app.database import async_session
 from app.models.card import LocalCardFile, TTSCardImage
 from app.services.image_cache import download_and_cut_sheet
-from app.services.mapping_index import load_mapping_index, save_mapping_index
+from app.services.mapping_index import get_mapping_index_path, load_mapping_index, save_mapping_index
 from app.services.renderer import render_card_preview
 from app.services.scanner import load_card_content
 
@@ -329,8 +329,8 @@ def best_orientation_rmse(path_a: Path, path_b: Path) -> tuple[float, str]:
 
 
 async def main() -> None:
-    parser = argparse.ArgumentParser(description="导入历史映射规则到 data/mapping_index.json")
-    parser.add_argument("--apply", action="store_true", help="实际写入 mapping_index.json；未指定时只生成预览报告")
+    parser = argparse.ArgumentParser(description="导入历史映射规则到 卡牌数据库/mapping_index.json")
+    parser.add_argument("--apply", action="store_true", help="实际写入卡牌数据库/mapping_index.json；未指定时只生成预览报告")
     parser.add_argument("--report", default="data/mapping_import_preview.json", help="预览报告输出路径")
     parser.add_argument("--validate-images", type=int, default=0, help="抽样校验本地渲染图与中文 TTS 图的数量")
     parser.add_argument("--validate-offset", type=int, default=0, help="图片校验候选起始偏移")
@@ -352,10 +352,10 @@ async def main() -> None:
     print(json.dumps({"stats": stats, "report": str(report_path), "diff_report": str(diff_report_path) if diff_report_path else None}, ensure_ascii=False, indent=2))
 
     if not args.apply:
-        print("未指定 --apply，只生成预览报告，未写入 mapping_index.json")
+        print("未指定 --apply，只生成预览报告，未写入卡牌数据库/mapping_index.json")
         return
 
-    index_path = settings.project_root / "data" / "mapping_index.json"
+    index_path = get_mapping_index_path()
     if index_path.exists():
         backup_path = index_path.with_name(f"mapping_index.backup-{datetime.now().strftime('%Y%m%d-%H%M%S')}.json")
         shutil.copy2(index_path, backup_path)

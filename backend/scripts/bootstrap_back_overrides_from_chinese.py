@@ -8,22 +8,17 @@ import json
 import shutil
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
 
 from sqlalchemy import select
 
 from app.database import async_session
 from app.models.card import LocalCardFile, TTSCardImage
-from app.services.mapping_index import BACK_PRESETS, load_mapping_index, save_mapping_index
+from app.services.mapping_index import BACK_PRESETS, get_mapping_index_path, load_mapping_index, save_mapping_index
 
 
 def _now_tag() -> str:
     return datetime.now().strftime("%Y%m%d-%H%M%S")
-
-
-def _index_path() -> Path:
-    return Path(__file__).resolve().parents[2] / "data" / "mapping_index.json"
 
 
 def _preset_by_url() -> dict[str, dict[str, str]]:
@@ -127,7 +122,7 @@ async def collect_changes(overwrite: bool) -> dict[str, Any]:
 
 async def main() -> None:
     parser = argparse.ArgumentParser(description="从中文 TTS 初始化单面卡卡背索引")
-    parser.add_argument("--apply", action="store_true", help="实际写入 data/mapping_index.json")
+    parser.add_argument("--apply", action="store_true", help="实际写入卡牌数据库/mapping_index.json")
     parser.add_argument("--overwrite", action="store_true", help="覆盖已有 back_override")
     args = parser.parse_args()
 
@@ -140,7 +135,7 @@ async def main() -> None:
         print("DRY-RUN：未写入映射索引。")
         return
 
-    index_path = _index_path()
+    index_path = get_mapping_index_path()
     if index_path.exists():
         backup_path = index_path.with_suffix(f".backup-{_now_tag()}.json")
         shutil.copy2(index_path, backup_path)
