@@ -5,12 +5,12 @@ from app.models import User, UserRole, CardIndex, Errata, ErrataStatus
 
 @pytest.mark.asyncio
 async def test_create_user(db):
-    user = User(username="test_user", password_hash="hash", role=UserRole.USER)
+    user = User(username="test_user", password_hash="hash", role=UserRole.ERRATA)
     db.add(user)
     await db.commit()
     result = await db.execute(select(User).where(User.username == "test_user"))
     u = result.scalar_one()
-    assert u.role == UserRole.USER
+    assert u.role == UserRole.ERRATA
     assert u.is_active is True
 
 
@@ -27,7 +27,7 @@ async def test_create_card_index(db):
 @pytest.mark.asyncio
 async def test_create_errata(db):
     card = CardIndex(arkhamdb_id="01150_err", name_zh="测试卡", category="剧本卡")
-    user = User(username="editor", password_hash="hash", role=UserRole.USER)
+    user = User(username="editor", password_hash="hash", role=UserRole.ERRATA)
     db.add_all([card, user])
     await db.flush()
     errata = Errata(
