@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
-from app.api import auth, cards, errata, review, publish, mapping
+from app.api import auth, cards, errata, review, publish, mapping, errata_drafts
 from app.services.data_repo_sync import periodic_data_repo_sync
 from app.services.tts_cache_warmer import start_tts_cache_warmer, stop_tts_cache_warmer
 
@@ -34,6 +34,7 @@ app.include_router(errata.router)
 app.include_router(review.router)
 app.include_router(publish.router)
 app.include_router(mapping.router)
+app.include_router(errata_drafts.router)
 
 # 挂载缓存静态文件目录
 cache_dir = settings.project_root / settings.cache_dir

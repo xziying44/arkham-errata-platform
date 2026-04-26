@@ -1,0 +1,88 @@
+import pytest
+from httpx import AsyncClient
+from sqlalchemy import select
+
+from app.models.card import CardIndex, LocalCardFile
+from app.models.errata_draft import ErrataAuditLog, ErrataDraft, ErrataDraftStatus
+from app.models.user import User, UserRole
+from app.utils.security import hash_password
+
+
+async def login_token(client: AsyncClient, username: str, password: str) -> str:
+    response = await client.post("/api/auth/login", json={"username": username, "password": password})
+    assert response.status_code == 200
+    return response.json()["token"]
+
+
+@pytest.mark.asyncio
+async def test_multiple_users_update_one_active_draft(client: AsyncClient, db):
+    card = CardIndex(arkhamdb_id="01001", name_zh="罗兰·班克斯", category="玩家卡")
+    file_a = LocalCardFile(arkhamdb_id="01001", face="a", relative_path="玩家卡/01001_a.card")
+    file_b = LocalCardFile(arkhamdb_id="01001", face="b", relative_path="玩家卡/01001_b.card")
+    alice = User(username="alice", password_hash=hash_password("pw"), role=UserRole.ERRATA)
+    bob = User(username="bob", password_hash=hash_password("pw"), role=UserRole.ERRATA)
+    db.add_all([card, file_a, file_b, alice, bob])
+    await db.commit()
+
+    alice_token = await login_token(client, "alice", "pw")
+    bob_token = await login_token(client, "bob", "pw")
+
+    first = await client.put(
+        "/api/errata-drafts/01001",
+        headers={"Authorization": f"Bearer {alice_token}"},
+        json={
+            "modified_faces": {"a": {"name": "罗兰·班克斯", "body": "第一次修改"}, "b": {"name": "背面"}},
+            "changed_faces": ["a"],
+            "diff_summary": "alice 修改正面",
+        },
+    )
+    assert first.status_code == 200
+
+    second = await client.put(
+        "/api/errata-drafts/01001",
+        headers={"Authorization": f"Bearer {bob_token}"},
+        json={
+            "modified_faces": {"a": {"name": "罗兰·班克斯", "body": "第二次修改"}, "b": {"name": "背面"}},
+            "changed_faces": ["a"],
+            "diff_summary": "bob 修改正面",
+        },
+    )
+    assert second.status_code == 200
+    assert second.json()["participant_usernames"] == ["alice", "bob"]
+    assert second.json()["modified_faces"]["a"]["body"] == "第二次修改"
+
+    drafts = (await db.execute(select(ErrataDraft).where(ErrataDraft.arkhamdb_id == "01001"))).scalars().all()
+    assert len(drafts) == 1
+
+    logs = (await db.execute(select(ErrataAuditLog).where(ErrataAuditLog.arkhamdb_id == "01001"))).scalars().all()
+    assert len(logs) == 3
+
+
+@pytest.mark.asyncio
+async def test_waiting_publish_draft_is_locked(client: AsyncClient, db):
+    card = CardIndex(arkhamdb_id="01002", name_zh="黛西·沃克", category="玩家卡")
+    file_a = LocalCardFile(arkhamdb_id="01002", face="a", relative_path="玩家卡/01002_a.card")
+    user = User(username="locked-user", password_hash=hash_password("pw"), role=UserRole.ERRATA)
+    db.add_all([card, file_a, user])
+    await db.commit()
+
+    token = await login_token(client, "locked-user", "pw")
+    created = await client.put(
+        "/api/errata-drafts/01002",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"modified_faces": {"a": {"name": "黛西"}}, "changed_faces": ["a"]},
+    )
+    assert created.status_code == 200
+
+    draft = (await db.execute(select(ErrataDraft).where(ErrataDraft.arkhamdb_id == "01002"))).scalar_one()
+    draft.status = ErrataDraftStatus.WAITING_PUBLISH
+    await db.commit()
+
+    response = await client.put(
+        "/api/errata-drafts/01002",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"modified_faces": {"a": {"name": "锁定后修改"}}, "changed_faces": ["a"]},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "该卡牌已进入待发布包，请管理员解锁后再修改"
