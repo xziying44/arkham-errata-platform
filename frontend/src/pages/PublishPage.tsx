@@ -55,22 +55,13 @@ export default function PublishPage() {
   const handleStep3 = async () => {
     setLoading(true);
     try {
-      const approvedCards = sheets.flatMap((sheet) =>
-        (sheet.card_ids || []).map((arkhamdbId: string, index: number) => ({
-          arkhamdb_id: arkhamdbId,
-          name_zh: arkhamdbId,
-          sheet_name: sheet.sheet_name,
-          unique_back: Boolean(sheet.back_sheet),
-          grid_position: index,
-        }))
-      );
       const sheetGrids = Object.fromEntries(
         sheets.map((sheet) => [
           sheet.sheet_name,
           { deck_key: sheet.sheet_name.replace(/\D/g, '').slice(0, 5) || '10000', width: 10, height: Math.ceil((sheet.card_ids?.length || 1) / 10) },
         ])
       );
-      const blob = await step3ExportTTS(approvedCards, sheetUrls, sheetGrids);
+      const blob = await step3ExportTTS(batchId, sheetUrls, sheetGrids);
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;

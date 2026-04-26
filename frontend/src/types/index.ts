@@ -1,8 +1,12 @@
 /** 用户 */
+export type UserRole = '勘误员' | '审核员' | '管理员';
+export type CardErrataState = '正常' | '勘误' | '待发布';
+export type WorkbenchMode = 'errata-all' | 'my-errata' | 'review' | 'package-review';
+
 export interface User {
   id: number;
   username: string;
-  role: '管理员' | '用户';
+  role: UserRole;
   is_active: boolean;
 }
 
@@ -103,7 +107,41 @@ export interface CardDetail {
   back_overrides: Record<string, CardBackOverride | null>;
 }
 
-export type CardErrataState = '正常' | '勘误中' | '待发布';
+export interface ErrataDraft {
+  id: number;
+  arkhamdb_id: string;
+  status: '勘误' | '待发布' | '已归档';
+  original_faces: Record<string, Record<string, unknown>>;
+  modified_faces: Record<string, Record<string, unknown>>;
+  changed_faces: string[];
+  rendered_previews: Record<string, string | null>;
+  package_id: number | null;
+  participant_usernames: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ErrataAuditLog {
+  id: number;
+  arkhamdb_id: string;
+  username: string;
+  action: string;
+  from_status: string | null;
+  to_status: string | null;
+  changed_faces: string[];
+  diff_summary: string | null;
+  created_at: string;
+}
+
+export interface ErrataPackage {
+  id: number;
+  package_no: string;
+  status: '待发布' | '发布中' | '已发布' | '已退回';
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+  published_at: string | null;
+}
 
 export interface CardTreeCard extends CardIndex {
   local_files: LocalCardFile[];
@@ -111,6 +149,9 @@ export interface CardTreeCard extends CardIndex {
   approved_errata_count: number;
   latest_batch_id: string | null;
   errata_state: CardErrataState;
+  participant_usernames: string[];
+  package_id: number | null;
+  latest_audit_at: string | null;
 }
 
 export interface CardTreeNode {

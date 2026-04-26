@@ -177,7 +177,7 @@ export default function CardBrowserPage() {
   const loadTree = useCallback(async (search?: string) => {
     setTreeLoading(true);
     try {
-      const data = await fetchCardTree(search);
+      const data = await fetchCardTree({ keyword: search });
       setTree(data.tree);
       if (search) setExpandedKeys(collectExpandableKeys(data.tree));
       if (!selectedId && data.tree.length > 0) {

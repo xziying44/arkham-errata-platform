@@ -20,8 +20,8 @@ export async function batchReject(ids: number[], note: string) {
 }
 
 /** 第一步：生成精灵图 */
-export async function step1GenerateSheets(batchId: string) {
-  const resp = await client.post('/admin/publish/step1-generate-sheets', { batch_id: batchId });
+export async function step1GenerateSheets(packageId: number | string) {
+  const resp = await client.post('/admin/publish/step1-generate-sheets', { package_id: Number(packageId) });
   return resp.data;
 }
 
@@ -32,9 +32,9 @@ export async function step2Upload(sheets: unknown[], uploadConfig: Record<string
 }
 
 /** 第三步：导出 TTS 存档 JSON */
-export async function step3ExportTTS(approvedCards: unknown[], sheetUrls: Record<string, string>, sheetGrids: Record<string, unknown>) {
+export async function step3ExportTTS(packageId: number | string, sheetUrls: Record<string, string>, sheetGrids: Record<string, unknown>) {
   const resp = await client.post('/admin/publish/step3-export-tts', {
-    approved_cards: approvedCards,
+    package_id: Number(packageId),
     sheet_urls: sheetUrls,
     sheet_grids: sheetGrids,
   }, { responseType: 'blob' });

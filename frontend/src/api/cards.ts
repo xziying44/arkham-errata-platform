@@ -11,8 +11,8 @@ export async function fetchFilters() {
   return resp.data;
 }
 
-export async function fetchCardTree(keyword?: string): Promise<CardTreeResponse> {
-  const resp = await client.get('/cards/tree', { params: { keyword: keyword || undefined } });
+export async function fetchCardTree(params?: { keyword?: string; scope?: string; package_id?: number }): Promise<CardTreeResponse> {
+  const resp = await client.get('/cards/tree', { params: { keyword: params?.keyword || undefined, scope: params?.scope, package_id: params?.package_id } });
   return resp.data;
 }
 

@@ -9,6 +9,9 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   isAdmin: boolean;
+  canErrata: boolean;
+  canReview: boolean;
+  canAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>(null!);
@@ -53,8 +56,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const canAdmin = user?.role === '管理员';
+  const canErrata = user?.role === '勘误员' || canAdmin;
+  const canReview = user?.role === '审核员' || canAdmin;
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login: loginFn, logout, isAdmin: user?.role === '管理员' }}>
+    <AuthContext.Provider value={{ user, token, loading, login: loginFn, logout, isAdmin: canAdmin, canErrata, canReview, canAdmin }}>
       {children}
     </AuthContext.Provider>
   );
