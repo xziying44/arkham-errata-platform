@@ -1,26 +1,31 @@
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { Layout, Menu, Button } from 'antd';
 import { useAuth } from '../hooks/useAuth';
-import { ProtectedRoute, AdminRoute } from './ProtectedRoute';
+import { ProtectedRoute, AdminRoute, ReviewerRoute } from './ProtectedRoute';
 import CardBrowserPage from '../pages/CardBrowserPage';
 import ReviewPage from '../pages/ReviewPage';
+import MyErrataPage from '../pages/MyErrataPage';
 import MappingPage from '../pages/MappingPage';
 import PublishPage from '../pages/PublishPage';
+import UserManagementPage from '../pages/UserManagementPage';
 
 const { Header, Content } = Layout;
 
 export default function AppLayout() {
-  const { isAdmin, logout } = useAuth();
+  const { canAdmin, canReview, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const menuItems = [
     { key: '/cards', label: '卡牌浏览' },
     { key: '/my-errata', label: '我的勘误' },
-    ...(isAdmin ? [
+    ...(canReview ? [
       { key: '/admin/review', label: '勘误审核' },
+    ] : []),
+    ...(canAdmin ? [
       { key: '/admin/mapping', label: '映射管理' },
       { key: '/admin/publish', label: '发布管理' },
+      { key: '/admin/users', label: '用户管理' },
     ] : []),
   ];
 
@@ -41,10 +46,11 @@ export default function AppLayout() {
         <Routes>
           <Route path="/cards" element={<ProtectedRoute><CardBrowserPage /></ProtectedRoute>} />
           <Route path="/errata/:arkhamdbId" element={<ProtectedRoute><CardBrowserPage /></ProtectedRoute>} />
-          <Route path="/my-errata" element={<ProtectedRoute><div style={{ padding: 24 }}>我的勘误（开发中）</div></ProtectedRoute>} />
-          <Route path="/admin/review" element={<AdminRoute><ReviewPage /></AdminRoute>} />
+          <Route path="/my-errata" element={<ProtectedRoute><MyErrataPage /></ProtectedRoute>} />
+          <Route path="/admin/review" element={<ReviewerRoute><ReviewPage /></ReviewerRoute>} />
           <Route path="/admin/mapping" element={<AdminRoute><MappingPage /></AdminRoute>} />
           <Route path="/admin/publish" element={<AdminRoute><PublishPage /></AdminRoute>} />
+          <Route path="/admin/users" element={<AdminRoute><UserManagementPage /></AdminRoute>} />
         </Routes>
       </Content>
     </Layout>

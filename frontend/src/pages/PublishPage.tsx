@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Card, Steps, Button, message, Upload, Space, Input, Descriptions } from 'antd';
+import { useEffect, useState } from 'react';
+import { Card, Steps, Button, message, Upload, Space, Descriptions, Select, Tag } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import {
   step1GenerateSheets,
@@ -8,16 +8,32 @@ import {
   step5UploadTTSJson,
   step6ExportReplacements,
 } from '../api/admin';
+import { fetchPackages, unlockPackage } from '../api/packages';
+import type { ErrataPackage } from '../types';
 
 /** 发布管理页面：六步发布流程 */
 export default function PublishPage() {
   const [current, setCurrent] = useState(0);
   const [batchId, setBatchId] = useState('');
+  const [packages, setPackages] = useState<ErrataPackage[]>([]);
   const [sheets, setSheets] = useState<any[]>([]);
   const [sheetUrls, setSheetUrls] = useState<Record<string, string>>({});
   const [urlMapping, setUrlMapping] = useState<Record<string, unknown> | null>(null);
   const [exportedPatch, setExportedPatch] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const loadPackages = async () => {
+    try {
+      const data = await fetchPackages();
+      setPackages(data.items || []);
+      const active = (data.items || []).find((item) => item.status === '待发布' || item.status === '发布中');
+      if (active && !batchId) setBatchId(String(active.id));
+    } catch {
+      setPackages([]);
+    }
+  };
+
+  useEffect(() => { loadPackages(); }, []);
 
   /** 第一步：生成精灵图 */
   const handleStep1 = async () => {
@@ -112,16 +128,39 @@ export default function PublishPage() {
     {
       title: '生成精灵图',
       content: (
-        <Space direction="vertical">
-          <Input
-            placeholder="批次ID"
-            value={batchId}
-            onChange={(e) => setBatchId(e.target.value)}
-            style={{ width: 200 }}
+        <Space direction="vertical" style={{ width: 520 }}>
+          <Select
+            placeholder="选择待发布勘误包"
+            value={batchId || undefined}
+            onChange={(value) => setBatchId(value)}
+            options={packages.map((item) => ({
+              value: String(item.id),
+              label: `${item.package_no}（${item.status}）`,
+            }))}
           />
-          <Button type="primary" onClick={handleStep1} loading={loading}>
-            开始生成
-          </Button>
+          <Space size={4} wrap>
+            {packages.map((item) => (
+              <Tag key={item.id} color={item.status === '待发布' ? 'warning' : item.status === '已发布' ? 'success' : 'default'}>
+                {item.package_no} · {item.status}
+              </Tag>
+            ))}
+          </Space>
+          <Space>
+            <Button type="primary" onClick={handleStep1} loading={loading} disabled={!batchId}>
+              开始生成
+            </Button>
+            <Button
+              disabled={!batchId}
+              onClick={async () => {
+                await unlockPackage(Number(batchId), '管理员在发布页解锁');
+                message.success('勘误包已解锁退回');
+                setBatchId('');
+                loadPackages();
+              }}
+            >
+              解锁整包
+            </Button>
+          </Space>
         </Space>
       ),
     },
