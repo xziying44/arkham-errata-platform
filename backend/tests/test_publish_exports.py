@@ -135,3 +135,17 @@ async def test_step3_uses_package_id_instead_of_approved_cards(client: AsyncClie
     payload = json.loads(response.content)
     assert payload["Nickname"] == "勘误发布包"
     assert any(obj.get("GMNotes") == json.dumps({"id": "01999"}, ensure_ascii=False) for obj in payload.values() if isinstance(obj, dict))
+
+
+def test_generated_tts_bag_can_be_uploaded_back_for_url_extraction():
+    from app.services.url_replacer import generate_tts_bag_json, extract_steam_urls_from_json
+
+    bag = generate_tts_bag_json(
+        approved_cards=[{"arkhamdb_id": "01104", "name_zh": "测试卡", "sheet_name": "SheetZH01104-01104", "unique_back": False}],
+        sheet_urls={"SheetZH01104-01104": "https://example.com/sheet.jpg"},
+        sheet_grids={"SheetZH01104-01104": {"deck_key": "1104", "width": 10, "height": 1}},
+    )
+
+    mapping = extract_steam_urls_from_json(bag)
+    assert set(mapping) == {"01104"}
+    assert mapping["01104"]["face_url"] == "https://example.com/sheet.jpg"

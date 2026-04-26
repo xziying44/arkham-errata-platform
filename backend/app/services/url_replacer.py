@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from app.services.mapping_index import load_mapping_index
+from app.services.tts_object_walker import extract_tts_card_mappings
 
 
 def _back_override_for(index: dict, arkhamdb_id: str) -> dict | None:
@@ -90,45 +91,9 @@ def generate_tts_bag_json(
     return bag
 
 
-def _extract_from_object(obj: dict, mapping: dict):
-    """从 TTS 对象中递归提取卡牌 URL 映射信息"""
-    if obj.get("Name") == "Card":
-        try:
-            gm = json.loads(obj.get("GMNotes", "{}"))
-            card_id = gm.get("id", "")
-            if card_id:
-                custom_deck = obj.get("CustomDeck", {})
-                deck_key = list(custom_deck.keys())[0] if custom_deck else ""
-                sheet = custom_deck.get(deck_key, {})
-                mapping[card_id] = {
-                    "face_url": sheet.get("FaceURL", ""),
-                    "back_url": sheet.get("BackURL", ""),
-                    "card_id": obj.get("CardID", 0),
-                    "deck_key": deck_key,
-                    "grid_w": sheet.get("NumWidth", 10),
-                    "grid_h": sheet.get("NumHeight", 1),
-                    "unique_back": sheet.get("UniqueBack", False),
-                }
-        except (json.JSONDecodeError, KeyError):
-            pass
-
-    for child in obj.get("ContainedObjects", []):
-        _extract_from_object(child, mapping)
-
-
 def extract_steam_urls_from_json(uploaded_json: dict) -> dict:
-    """从 TTS 存档 JSON 中提取卡牌 URL 映射
-
-    Args:
-        uploaded_json: TTS 存档 JSON 数据（已解析为 dict）
-
-    Returns:
-        {arkhamdb_id: {face_url, back_url, card_id, deck_key, grid_w, grid_h, ...}} 映射表
-    """
-    mapping = {}
-    for obj in uploaded_json.get("ObjectStates", []):
-        _extract_from_object(obj, mapping)
-    return mapping
+    """从 TTS 存档 JSON 中提取卡牌 URL 映射。"""
+    return extract_tts_card_mappings(uploaded_json)
 
 
 def _replace_card_urls_in_data(data: dict, card_id: str, mapping: dict, mapping_index: dict) -> dict:
