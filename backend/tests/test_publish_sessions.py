@@ -166,3 +166,57 @@ async def test_generate_sheets_creates_session_artifacts(client: AsyncClient, db
     kinds = {artifact["kind"] for artifact in data["artifacts"]}
     assert "sheet_front" in kinds
     assert "sheet_back" in kinds
+
+@pytest.mark.asyncio
+async def test_import_manual_urls_creates_url_mapping_artifact(client: AsyncClient, db):
+    token, admin = await _admin_token(client, db)
+    package = ErrataPackage(package_no=f"ERRATA-URLS-{uuid.uuid4().hex[:6]}", status=ErrataPackageStatus.WAITING_PUBLISH, created_by=admin.id)
+    db.add(package)
+    await db.commit()
+    await db.refresh(package)
+    session_response = await client.post("/api/admin/publish/sessions", headers={"Authorization": f"Bearer {token}"}, json={"package_id": package.id})
+    session_id = session_response.json()["id"]
+
+    response = await client.post(
+        f"/api/admin/publish/sessions/{session_id}/import-urls",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "source": "manual",
+            "url_mapping": {
+                "01104": {"face_url": "https://example.com/sheet.jpg", "back_url": "https://example.com/sheet-back.jpg", "deck_key": "1104", "card_id": 110400, "grid_w": 10, "grid_h": 1, "unique_back": False}
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    artifacts = response.json()["artifacts"]
+    url_artifacts = [artifact for artifact in artifacts if artifact["kind"] == "url_mapping"]
+    assert url_artifacts
+    assert url_artifacts[-1]["metadata"]["url_mapping"]["01104"]["face_url"] == "https://example.com/sheet.jpg"
+
+
+@pytest.mark.asyncio
+async def test_rollback_to_confirm_sheets_supersedes_url_artifacts(client: AsyncClient, db):
+    token, admin = await _admin_token(client, db)
+    package = ErrataPackage(package_no=f"ERRATA-ROLLBACK-{uuid.uuid4().hex[:6]}", status=ErrataPackageStatus.WAITING_PUBLISH, created_by=admin.id)
+    db.add(package)
+    await db.commit()
+    await db.refresh(package)
+    session_response = await client.post("/api/admin/publish/sessions", headers={"Authorization": f"Bearer {token}"}, json={"package_id": package.id})
+    session_id = session_response.json()["id"]
+    await client.post(
+        f"/api/admin/publish/sessions/{session_id}/import-urls",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"source": "manual", "url_mapping": {"01104": {"face_url": "new-face"}}},
+    )
+
+    response = await client.post(
+        f"/api/admin/publish/sessions/{session_id}/rollback-step",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"target_step": "confirm_sheets"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["current_step"] == "confirm_sheets"
+    url_artifacts = [artifact for artifact in response.json()["artifacts"] if artifact["kind"] == "url_mapping"]
+    assert all(artifact["status"] == "superseded" for artifact in url_artifacts)

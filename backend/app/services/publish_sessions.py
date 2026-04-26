@@ -1,6 +1,7 @@
 """发布会话服务：管理发布尝试和产物索引。"""
 
 import hashlib
+import json
 import uuid
 from pathlib import Path
 
@@ -126,3 +127,44 @@ async def supersede_artifacts_after_step(db: AsyncSession, session_id: int, kind
     )
     for artifact in result.scalars().all():
         artifact.status = PublishArtifactStatus.SUPERSEDED
+
+
+STEP_ARTIFACTS: dict[str, set[PublishArtifactKind]] = {
+    "confirm_sheets": {PublishArtifactKind.URL_MAPPING, PublishArtifactKind.TTS_BAG, PublishArtifactKind.PATCH_ZIP, PublishArtifactKind.MANIFEST, PublishArtifactKind.REPORT},
+    "prepare_urls": {PublishArtifactKind.PATCH_ZIP, PublishArtifactKind.MANIFEST, PublishArtifactKind.REPORT},
+}
+
+
+async def import_url_mapping(
+    db: AsyncSession,
+    session: PublishSession,
+    source: str,
+    url_mapping: dict[str, dict],
+) -> PublishArtifact:
+    mapping_dir = settings.project_root / session.artifact_root / "mappings"
+    mapping_dir.mkdir(parents=True, exist_ok=True)
+    mapping_path = mapping_dir / "url_mapping.json"
+    mapping_path.write_text(json.dumps({"source": source, "url_mapping": url_mapping}, ensure_ascii=False, indent=2), encoding="utf-8")
+    artifact = await add_artifact(
+        db,
+        session,
+        PublishArtifactKind.URL_MAPPING,
+        mapping_path,
+        {"source": source, "url_mapping": url_mapping},
+        PublishArtifactStatus.CONFIRMED,
+    )
+    session.status = PublishSessionStatus.URLS_READY
+    session.current_step = "export_patch"
+    return artifact
+
+
+async def rollback_session_to_step(db: AsyncSession, session: PublishSession, target_step: str) -> None:
+    kinds = STEP_ARTIFACTS.get(target_step)
+    if kinds is None:
+        raise HTTPException(status_code=400, detail="不支持的回退步骤")
+    await supersede_artifacts_after_step(db, session.id, kinds)
+    session.current_step = target_step
+    if target_step == "confirm_sheets":
+        session.status = PublishSessionStatus.SHEETS_READY
+    elif target_step == "prepare_urls":
+        session.status = PublishSessionStatus.URLS_READY

@@ -21,9 +21,9 @@ from app.services.url_replacer import (
 )
 from app.services.renderer import render_card_preview
 from app.config import settings
-from app.schemas.publish import PublishDirectoryPresetUpdateRequest, PublishSessionCreateRequest
+from app.schemas.publish import PublishDirectoryPresetUpdateRequest, PublishRollbackRequest, PublishSessionCreateRequest, PublishUrlImportRequest
 from app.services.publish_package_builder import build_replacement_plan
-from app.services.publish_sessions import add_artifact, create_publish_session, list_session_artifacts, load_publish_session, supersede_artifacts_after_step
+from app.services.publish_sessions import add_artifact, create_publish_session, import_url_mapping, list_session_artifacts, load_publish_session, rollback_session_to_step, supersede_artifacts_after_step
 
 router = APIRouter(prefix="/api/admin/publish", tags=["发布"])
 
@@ -242,6 +242,86 @@ async def get_replacement_preview(
         ),
     ]
     return {"items": build_replacement_plan(roots, build_approved_cards_from_package(drafts), url_mapping)}
+
+
+@router.post("/sessions/{session_id}/import-urls")
+async def import_session_urls(
+    session_id: int,
+    body: PublishUrlImportRequest,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    session = await load_publish_session(db, session_id)
+    await import_url_mapping(db, session, body.source, body.url_mapping)
+    session.updated_by = admin.id
+    await db.commit()
+    await db.refresh(session)
+    return await serialize_publish_session(db, session)
+
+
+@router.post("/sessions/{session_id}/rollback-step")
+async def rollback_session_step(
+    session_id: int,
+    body: PublishRollbackRequest,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    session = await load_publish_session(db, session_id)
+    await rollback_session_to_step(db, session, body.target_step)
+    session.updated_by = admin.id
+    await db.commit()
+    await db.refresh(session)
+    return await serialize_publish_session(db, session)
+
+
+@router.post("/sessions/{session_id}/export-patch")
+async def export_session_patch(
+    session_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    session = await load_publish_session(db, session_id)
+    package, drafts = await load_publish_package(
+        db, session.package_id, {ErrataPackageStatus.WAITING_PUBLISH, ErrataPackageStatus.PUBLISHING}
+    )
+    artifacts = await list_session_artifacts(db, session.id)
+    url_artifact = next(
+        (
+            artifact
+            for artifact in artifacts
+            if artifact.kind == PublishArtifactKind.URL_MAPPING
+            and artifact.status in {PublishArtifactStatus.ACTIVE, PublishArtifactStatus.CONFIRMED}
+        ),
+        None,
+    )
+    if url_artifact is None:
+        raise HTTPException(status_code=409, detail="缺少 URL 映射，不能导出补丁包")
+    url_mapping = url_artifact.artifact_metadata.get("url_mapping", {})
+    roots = [
+        (
+            "decomposed/language-pack/Simplified Chinese - Campaigns",
+            settings.project_root / settings.sced_downloads / "decomposed" / "language-pack" / "Simplified Chinese - Campaigns",
+        ),
+        (
+            "decomposed/language-pack/Simplified Chinese - Player Cards",
+            settings.project_root / settings.sced_downloads / "decomposed" / "language-pack" / "Simplified Chinese - Player Cards",
+        ),
+    ]
+    plan = build_replacement_plan(roots, build_approved_cards_from_package(drafts), url_mapping)
+    blocking = [item for item in plan if item["blocking_errors"]]
+    if blocking:
+        raise HTTPException(status_code=409, detail={"message": "替换计划存在阻断问题", "items": blocking})
+    report_dir = settings.project_root / session.artifact_root / "reports"
+    report_dir.mkdir(parents=True, exist_ok=True)
+    report_path = report_dir / "validation_report.json"
+    report_path.write_text(json.dumps({"package_no": package.package_no, "items": plan}, ensure_ascii=False, indent=2), encoding="utf-8")
+    await add_artifact(db, session, PublishArtifactKind.REPORT, report_path, {"items": plan}, PublishArtifactStatus.CONFIRMED)
+    session.status = PublishSessionStatus.PATCH_READY
+    session.current_step = "complete"
+    session.updated_by = admin.id
+    await db.commit()
+    await db.refresh(session)
+    return await serialize_publish_session(db, session)
 
 
 async def load_publish_package(

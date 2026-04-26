@@ -26,3 +26,15 @@ async def test_replacement_plan_marks_existing_card_as_replace(tmp_path):
     assert plan[0]["action"] == "替换"
     assert plan[0]["source_path"] == "decomposed/language-pack/Test/pack/测试.abc123.json"
     assert plan[0]["blocking_errors"] == []
+
+
+def test_replacement_plan_blocks_missing_url_mapping(tmp_path):
+    plan = build_replacement_plan(
+        chinese_roots=[],
+        package_cards=[{"arkhamdb_id": "09999", "name_zh": "新增卡"}],
+        url_mapping={},
+    )
+
+    assert plan[0]["action"] == "新增"
+    assert "缺少新 URL 映射" in plan[0]["blocking_errors"]
+    assert "缺少中文 TTS 记录，需要目录预设新增对象" in plan[0]["blocking_errors"]

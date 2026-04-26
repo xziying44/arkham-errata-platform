@@ -57,3 +57,12 @@ class PublishDirectoryPresetUpdateRequest(BaseModel):
     target_object_dir: str | None = None
     label: str | None = None
     is_active: bool | None = None
+
+
+class PublishUrlImportRequest(BaseModel):
+    source: str = "manual"
+    url_mapping: dict[str, dict]
+
+
+class PublishRollbackRequest(BaseModel):
+    target_step: str
