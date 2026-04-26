@@ -18,6 +18,7 @@ class ErrataAuditAction(str, enum.Enum):
     REVIEW_SAVE = "审核修改"
     PACKAGE = "生成包"
     UNLOCK = "解锁退回"
+    CANCEL = "取消勘误"
     PUBLISH = "发布完成"
 
 

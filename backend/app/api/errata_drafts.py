@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.auth import require_user
+from app.api.auth import require_reviewer, require_user
 from app.database import get_db
 from app.models.errata_draft import ErrataAuditAction
 from app.models.user import User, UserRole
 from app.schemas.errata_draft import ErrataAuditLogResponse, ErrataDraftResponse, SaveErrataDraftRequest
-from app.services.errata_drafts import get_active_draft, get_logs, get_participant_usernames, save_draft
+from app.services.errata_drafts import cancel_draft, get_active_draft, get_logs, get_participant_usernames, save_draft
 
 router = APIRouter(prefix="/api/errata-drafts", tags=["勘误副本"])
 
@@ -80,3 +80,15 @@ async def list_draft_logs(
         )
         for log, username in rows
     ]
+
+
+@router.post("/{arkhamdb_id}/cancel")
+async def cancel_errata_draft(
+    arkhamdb_id: str,
+    body: dict | None = None,
+    db: AsyncSession = Depends(get_db),
+    reviewer: User = Depends(require_reviewer),
+):
+    note = (body or {}).get("note")
+    draft = await cancel_draft(db, arkhamdb_id, reviewer, note)
+    return {"ok": True, "arkhamdb_id": draft.arkhamdb_id, "status": "正常"}

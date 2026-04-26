@@ -1,5 +1,6 @@
 import hashlib
 import json
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import HTTPException
@@ -136,6 +137,33 @@ async def save_draft(
         draft.status.value,
         body.changed_faces,
         body.diff_summary,
+    )
+    await db.commit()
+    await db.refresh(draft)
+    return draft
+
+
+async def cancel_draft(db: AsyncSession, arkhamdb_id: str, user: User, note: str | None = None) -> ErrataDraft:
+    draft = await get_active_draft(db, arkhamdb_id)
+    if draft is None:
+        raise HTTPException(status_code=404, detail="该卡牌还没有勘误副本")
+    if draft.status != ErrataDraftStatus.ERRATA:
+        raise HTTPException(status_code=409, detail="只有勘误状态的卡牌可以取消勘误")
+
+    from_status = draft.status.value
+    draft.status = ErrataDraftStatus.ARCHIVED
+    draft.archived_at = datetime.now()
+    draft.package_id = None
+    draft.updated_by = user.id
+    await append_audit_log(
+        db,
+        draft,
+        user,
+        ErrataAuditAction.CANCEL,
+        from_status,
+        "正常",
+        draft.changed_faces,
+        note or "审核员取消勘误状态",
     )
     await db.commit()
     await db.refresh(draft)

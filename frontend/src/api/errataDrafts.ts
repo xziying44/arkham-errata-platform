@@ -23,3 +23,8 @@ export async function fetchErrataDraftLogs(arkhamdbId: string): Promise<ErrataAu
   const resp = await client.get(`/errata-drafts/${arkhamdbId}/logs`);
   return resp.data;
 }
+
+export async function cancelErrataDraft(arkhamdbId: string, note?: string): Promise<{ ok: boolean; arkhamdb_id: string; status: '正常' }> {
+  const resp = await client.post(`/errata-drafts/${arkhamdbId}/cancel`, { note });
+  return resp.data;
+}

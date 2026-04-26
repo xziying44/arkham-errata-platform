@@ -86,3 +86,50 @@ async def test_waiting_publish_draft_is_locked(client: AsyncClient, db):
 
     assert response.status_code == 409
     assert response.json()["detail"] == "该卡牌已进入待发布包，请管理员解锁后再修改"
+
+@pytest.mark.asyncio
+async def test_reviewer_can_cancel_errata_draft_to_normal(client: AsyncClient, db):
+    card = CardIndex(arkhamdb_id="01988", name_zh="误点卡", category="玩家卡", cycle="01_基础游戏")
+    file_a = LocalCardFile(arkhamdb_id="01988", face="a", relative_path="玩家卡/01988_a.card")
+    owner = User(username="cancel-owner", password_hash=hash_password("pw"), role=UserRole.ERRATA)
+    reviewer = User(username="cancel-reviewer", password_hash=hash_password("pw"), role=UserRole.REVIEWER)
+    db.add_all([card, file_a, owner, reviewer])
+    await db.commit()
+    await db.refresh(owner)
+
+    draft = ErrataDraft(
+        arkhamdb_id="01988",
+        status=ErrataDraftStatus.ERRATA,
+        original_faces={"a": {"name": "误点卡"}},
+        modified_faces={"a": {"name": "误点卡"}},
+        changed_faces=["a"],
+        created_by=owner.id,
+        updated_by=owner.id,
+    )
+    db.add(draft)
+    await db.commit()
+
+    token = await login_token(client, "cancel-reviewer", "pw")
+    response = await client.post(
+        "/api/errata-drafts/01988/cancel",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"note": "用户点错了"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "正常"
+
+    await db.refresh(draft)
+    assert draft.status == ErrataDraftStatus.ARCHIVED
+    assert draft.archived_at is not None
+
+    tree = await client.get("/api/cards/tree")
+    cards = {}
+    for category in tree.json()["tree"]:
+        for cycle in category["children"]:
+            for node in cycle["children"]:
+                cards[node["key"]] = node["card"]
+    assert cards["01988"]["errata_state"] == "正常"
+
+    logs = await client.get("/api/errata-drafts/01988/logs", headers={"Authorization": f"Bearer {token}"})
+    assert any(log["action"] == "取消勘误" for log in logs.json())

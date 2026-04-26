@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Key, ReactNode } from 'react';
 import { FolderOpenOutlined, FolderOutlined } from '@ant-design/icons';
-import { Button, Card, Empty, Input, Layout, message, Space, Spin, Tag, Tree, Typography } from 'antd';
+import { Button, Card, Empty, Input, Layout, message, Modal, Space, Spin, Tag, Tree, Typography } from 'antd';
 import type { DataNode } from 'antd/es/tree';
 import { fetchCardDetail, fetchCardTree, previewAllFaces } from '../../api/cards';
 import { fetchCardFileContent, previewCard } from '../../api/errata';
 import CardComparison from '../CardComparison';
 import JsonEditor from '../JsonEditor';
 import type { CardDetail, CardTreeCard, CardTreeNode, ErrataAuditLog, ErrataDraft, PreviewFace, WorkbenchMode } from '../../types';
-import { fetchErrataDraft, fetchErrataDraftLogs, saveErrataDraft } from '../../api/errataDrafts';
+import { cancelErrataDraft, fetchErrataDraft, fetchErrataDraftLogs, saveErrataDraft } from '../../api/errataDrafts';
 import { createReviewPackage } from '../../api/packages';
 
 const { Sider, Content } = Layout;
@@ -197,6 +197,7 @@ export default function CardWorkbench({ mode, packageId }: CardWorkbenchProps) {
   const [draft, setDraft] = useState<ErrataDraft | null>(null);
   const [auditLogs, setAuditLogs] = useState<ErrataAuditLog[]>([]);
   const [packaging, setPackaging] = useState(false);
+  const [canceling, setCanceling] = useState(false);
 
   const loadTree = useCallback(async (search?: string) => {
     setTreeLoading(true);
@@ -394,6 +395,32 @@ export default function CardWorkbench({ mode, packageId }: CardWorkbenchProps) {
     }
   };
 
+  const handleCancelErrata = async () => {
+    if (!selectedId) return;
+    Modal.confirm({
+      title: '取消这张卡的勘误状态？',
+      content: '这会将当前勘误副本归档，卡牌回到正常状态；历史操作日志会保留。',
+      okText: '取消勘误',
+      okButtonProps: { danger: true },
+      cancelText: '返回',
+      onOk: async () => {
+        setCanceling(true);
+        try {
+          await cancelErrataDraft(selectedId, '审核员取消勘误状态');
+          message.success('已取消勘误状态');
+          setDraft(null);
+          setAuditLogs([]);
+          setSelectedId(null);
+          await loadTree(keyword);
+        } catch (e: any) {
+          message.error(e?.response?.data?.detail || '取消勘误失败');
+        } finally {
+          setCanceling(false);
+        }
+      },
+    });
+  };
+
   return (
     <Layout style={{ minHeight: 'calc(100vh - 112px)', background: 'transparent' }}>
       <Sider width={430} theme="light" style={cardListPanelStyle}>
@@ -474,6 +501,9 @@ export default function CardWorkbench({ mode, packageId }: CardWorkbenchProps) {
                     </Button>
                   ))}
                   <Button type="primary" onClick={handleRenderSelected} loading={rendering}>校验渲染</Button>
+                  {mode === 'review' && draft?.status === '勘误' && (
+                    <Button danger onClick={handleCancelErrata} loading={canceling}>取消勘误状态</Button>
+                  )}
                   <Button danger type="primary" onClick={handleSubmit} disabled={draft?.status === '待发布'}>{mode === 'review' ? '保存审核修改' : '保存勘误'}</Button>
                 </Space>
               }
