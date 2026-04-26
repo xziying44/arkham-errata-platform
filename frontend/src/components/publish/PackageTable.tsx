@@ -7,7 +7,7 @@ interface PackageTableProps {
   selectedPackageId: number | null;
   loading?: boolean;
   onSelect: (pkg: ErrataPackage) => void;
-  onCreateSession: (pkg: ErrataPackage) => void;
+  onOpenSession: (pkg: ErrataPackage) => void;
   onUnlock: (pkg: ErrataPackage) => void;
 }
 
@@ -18,7 +18,7 @@ const statusColor: Record<string, string> = {
   已退回: 'default',
 };
 
-export default function PackageTable({ packages, selectedPackageId, loading, onSelect, onCreateSession, onUnlock }: PackageTableProps) {
+export default function PackageTable({ packages, selectedPackageId, loading, onSelect, onOpenSession, onUnlock }: PackageTableProps) {
   const columns: ColumnsType<ErrataPackage> = [
     { title: '包号', dataIndex: 'package_no', width: 160 },
     { title: '状态', dataIndex: 'status', width: 100, render: (value) => <Tag color={statusColor[value] || 'default'}>{value}</Tag> },
@@ -32,7 +32,7 @@ export default function PackageTable({ packages, selectedPackageId, loading, onS
       render: (_, record) => (
         <Space>
           <Button size="small" onClick={() => onSelect(record)}>审阅</Button>
-          <Button size="small" type="primary" disabled={record.status !== '待发布'} onClick={() => onCreateSession(record)}>发布</Button>
+          <Button size="small" type="primary" disabled={record.status !== '待发布'} onClick={() => onOpenSession(record)}>{record.latest_session ? '继续发布' : '创建发布'}</Button>
           <Button size="small" disabled={record.status !== '待发布'} onClick={() => onUnlock(record)}>解锁整包</Button>
         </Space>
       ),

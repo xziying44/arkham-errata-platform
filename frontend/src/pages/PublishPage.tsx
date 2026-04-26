@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Card, Col, Row, Space, Tabs, message } from 'antd';
-import { createPublishSession, fetchDirectoryPresets } from '../api/admin';
+import { Card, Space, Tabs, message } from 'antd';
+import { createPublishSession, fetchDirectoryPresets, fetchPublishSession } from '../api/admin';
 import { fetchPackages, unlockPackage } from '../api/packages';
 import type { ErrataPackage, PublishDirectoryPreset, PublishSession } from '../types';
 import CardWorkbench from '../components/workbench/CardWorkbench';
@@ -45,15 +45,17 @@ export default function PublishPage() {
     loadPresets();
   }, []);
 
-  const handleCreateSession = async (pkg: ErrataPackage) => {
+  const handleOpenSession = async (pkg: ErrataPackage) => {
     try {
-      const next = await createPublishSession(pkg.id);
+      const next = pkg.latest_session
+        ? await fetchPublishSession(pkg.latest_session.id)
+        : await createPublishSession(pkg.id);
       setSelectedPackage(pkg);
       setSession(next);
-      message.success('发布会话已创建');
+      message.success(pkg.latest_session ? '发布会话已加载' : '发布会话已创建');
       await loadPackages();
     } catch (error: any) {
-      message.error(error?.response?.data?.detail || '创建发布会话失败');
+      message.error(error?.response?.data?.detail || '打开发布会话失败');
     }
   };
 
@@ -83,21 +85,15 @@ export default function PublishPage() {
                     selectedPackageId={selectedPackage?.id || null}
                     loading={loading}
                     onSelect={setSelectedPackage}
-                    onCreateSession={handleCreateSession}
+                    onOpenSession={handleOpenSession}
                     onUnlock={handleUnlock}
                   />
-                  <Row gutter={16}>
-                    <Col span={12}>
-                      <Card title="发布会话" size="small">
-                        <PublishSessionWizard session={session} onSessionChange={setSession} />
-                      </Card>
-                    </Col>
-                    <Col span={12}>
-                      <Card title={selectedPackage ? `发布前审阅：${selectedPackage.package_no}` : '发布前审阅'} size="small">
-                        {selectedPackage ? <CardWorkbench mode="package-review" packageId={selectedPackage.id} /> : '请选择勘误包'}
-                      </Card>
-                    </Col>
-                  </Row>
+                  <Card title="发布会话" size="small">
+                    <PublishSessionWizard session={session} packageNo={selectedPackage?.package_no} onSessionChange={setSession} />
+                  </Card>
+                  <Card title={selectedPackage ? `发布前审阅：${selectedPackage.package_no}` : '发布前审阅'} size="small">
+                    {selectedPackage ? <CardWorkbench mode="package-review" packageId={selectedPackage.id} /> : '请选择勘误包'}
+                  </Card>
                 </Space>
               ),
             },

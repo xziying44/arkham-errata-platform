@@ -1,4 +1,4 @@
-import { Button, Card, Space, Steps, Typography, message } from 'antd';
+import { Button, Card, Descriptions, Space, Steps, Typography, message } from 'antd';
 import { useEffect, useState } from 'react';
 import { fetchReplacementPreview, generateSessionSheets } from '../../api/admin';
 import type { PublishSession, ReplacementPreviewItem } from '../../types';
@@ -7,6 +7,7 @@ import UrlMappingTable from './UrlMappingTable';
 
 interface PublishSessionWizardProps {
   session: PublishSession | null;
+  packageNo?: string;
   onSessionChange: (session: PublishSession) => void;
 }
 
@@ -18,7 +19,7 @@ const stepIndex: Record<string, number> = {
   complete: 4,
 };
 
-export default function PublishSessionWizard({ session, onSessionChange }: PublishSessionWizardProps) {
+export default function PublishSessionWizard({ session, packageNo, onSessionChange }: PublishSessionWizardProps) {
   const [loading, setLoading] = useState(false);
   const [previewItems, setPreviewItems] = useState<ReplacementPreviewItem[]>([]);
 
@@ -27,7 +28,7 @@ export default function PublishSessionWizard({ session, onSessionChange }: Publi
     fetchReplacementPreview(session.id).then((data) => setPreviewItems(data.items || [])).catch(() => setPreviewItems([]));
   }, [session]);
 
-  if (!session) return <Typography.Text type="secondary">请选择待发布勘误包并创建发布会话</Typography.Text>;
+  if (!session) return <Typography.Text type="secondary">请选择待发布勘误包，点击“创建发布”或“继续发布”后，这里会显示发布步骤、精灵图和 URL 校验。</Typography.Text>;
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -46,6 +47,11 @@ export default function PublishSessionWizard({ session, onSessionChange }: Publi
     <Space direction="vertical" style={{ width: '100%' }} size={16}>
       <Steps current={stepIndex[session.current_step] || 0} items={[{ title: '选择包' }, { title: '精灵图' }, { title: 'URL' }, { title: '补丁包' }, { title: '完成' }]} />
       <Card size="small" title={`发布会话 #${session.id} · ${session.status}`}>
+        <Descriptions size="small" column={3} style={{ marginBottom: 16 }}>
+          <Descriptions.Item label="勘误包">{packageNo || session.package_id}</Descriptions.Item>
+          <Descriptions.Item label="当前步骤">{session.current_step}</Descriptions.Item>
+          <Descriptions.Item label="产物数">{session.artifacts.length}</Descriptions.Item>
+        </Descriptions>
         {session.current_step === 'select_package' && <Button type="primary" loading={loading} onClick={handleGenerate}>生成精灵图</Button>}
         {session.current_step === 'confirm_sheets' && <SheetPreviewPanel artifacts={session.artifacts} />}
         {session.current_step === 'export_patch' && <UrlMappingTable items={previewItems} />}
