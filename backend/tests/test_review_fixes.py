@@ -9,6 +9,14 @@ from app.config import settings
 from app.models.card import CardIndex, TTSCardImage
 from app.models.card import LocalCardFile
 from app.models.errata import Errata, ErrataStatus
+from app.models.errata_draft import (
+    ErrataAuditAction,
+    ErrataAuditLog,
+    ErrataDraft,
+    ErrataDraftStatus,
+    ErrataPackage,
+    ErrataPackageStatus,
+)
 from app.models.user import User, UserRole
 from app.utils.security import hash_password
 
@@ -22,8 +30,8 @@ async def _login(client, username: str, password: str = "123456") -> str:
 @pytest.mark.asyncio
 async def test_errata_preview_requires_owner_or_admin(client, db):
     card = CardIndex(arkhamdb_id="90001", name_zh="测试卡", category="玩家卡")
-    owner = User(username="owner", password_hash=hash_password("123456"), role=UserRole.USER)
-    other = User(username="other", password_hash=hash_password("123456"), role=UserRole.USER)
+    owner = User(username="owner", password_hash=hash_password("123456"), role=UserRole.ERRATA)
+    other = User(username="other", password_hash=hash_password("123456"), role=UserRole.ERRATA)
     db.add_all([card, owner, other])
     await db.flush()
     errata = Errata(
@@ -405,17 +413,44 @@ async def test_local_card_tree_includes_errata_review_state(client, db):
     pending_card = CardIndex(arkhamdb_id="94001", name_zh="待审核卡", category="玩家卡", cycle="01_基础游戏")
     approved_card = CardIndex(arkhamdb_id="94002", name_zh="待发布卡", category="玩家卡", cycle="01_基础游戏")
     normal_card = CardIndex(arkhamdb_id="94003", name_zh="普通卡", category="玩家卡", cycle="01_基础游戏")
-    user_a = User(username="tree_user_a", password_hash="hash", role=UserRole.USER)
-    user_b = User(username="tree_user_b", password_hash="hash", role=UserRole.USER)
+    user_a = User(username="tree_user_a", password_hash="hash", role=UserRole.ERRATA)
+    user_b = User(username="tree_user_b", password_hash="hash", role=UserRole.ERRATA)
     db.add_all([pending_card, approved_card, normal_card, user_a, user_b])
     await db.flush()
+    package = ErrataPackage(package_no="ERRATA-TREE", status=ErrataPackageStatus.WAITING_PUBLISH, created_by=user_a.id)
+    db.add(package)
+    await db.flush()
+    draft_a = ErrataDraft(
+        arkhamdb_id="94001",
+        status=ErrataDraftStatus.ERRATA,
+        original_faces={},
+        modified_faces={"a": {}},
+        changed_faces=["a"],
+        created_by=user_a.id,
+        updated_by=user_b.id,
+    )
+    draft_b = ErrataDraft(
+        arkhamdb_id="94002",
+        status=ErrataDraftStatus.WAITING_PUBLISH,
+        original_faces={},
+        modified_faces={"a": {}},
+        changed_faces=["a"],
+        package_id=package.id,
+        created_by=user_a.id,
+        updated_by=user_a.id,
+    )
     db.add_all([
         LocalCardFile(arkhamdb_id="94001", face="a", relative_path="玩家卡/01_基础游戏/94001_a.card", content_hash="hash-a", last_modified="0"),
         LocalCardFile(arkhamdb_id="94002", face="a", relative_path="玩家卡/01_基础游戏/94002_a.card", content_hash="hash-b", last_modified="0"),
         LocalCardFile(arkhamdb_id="94003", face="a", relative_path="玩家卡/01_基础游戏/94003_a.card", content_hash="hash-c", last_modified="0"),
-        Errata(arkhamdb_id="94001", user_id=user_a.id, original_content="{}", modified_content="{}", status=ErrataStatus.PENDING),
-        Errata(arkhamdb_id="94001", user_id=user_b.id, original_content="{}", modified_content="{}", status=ErrataStatus.PENDING),
-        Errata(arkhamdb_id="94002", user_id=user_a.id, original_content="{}", modified_content="{}", status=ErrataStatus.APPROVED, batch_id="batch-a"),
+        draft_a,
+        draft_b,
+    ])
+    await db.flush()
+    db.add_all([
+        ErrataAuditLog(draft_id=draft_a.id, arkhamdb_id="94001", user_id=user_a.id, action=ErrataAuditAction.SAVE, changed_faces=["a"]),
+        ErrataAuditLog(draft_id=draft_a.id, arkhamdb_id="94001", user_id=user_b.id, action=ErrataAuditAction.SAVE, changed_faces=["a"]),
+        ErrataAuditLog(draft_id=draft_b.id, arkhamdb_id="94002", user_id=user_a.id, action=ErrataAuditAction.PACKAGE, changed_faces=["a"]),
     ])
     await db.commit()
 
@@ -428,9 +463,10 @@ async def test_local_card_tree_includes_errata_review_state(client, db):
             for node in cycle["children"]:
                 cards[node["key"]] = node["card"]
 
-    assert cards["94001"]["errata_state"] == "勘误中"
-    assert cards["94001"]["pending_errata_count"] == 2
+    assert cards["94001"]["errata_state"] == "勘误"
+    assert cards["94001"]["pending_errata_count"] == 1
+    assert cards["94001"]["participant_usernames"] == ["tree_user_a", "tree_user_b"]
     assert cards["94002"]["errata_state"] == "待发布"
     assert cards["94002"]["approved_errata_count"] == 1
-    assert cards["94002"]["latest_batch_id"] == "batch-a"
+    assert cards["94002"]["latest_batch_id"] == str(package.id)
     assert cards["94003"]["errata_state"] == "正常"

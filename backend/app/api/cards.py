@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pathlib import Path
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
@@ -9,6 +10,9 @@ from app.database import get_db
 from app.config import settings
 from app.models.card import CardIndex, LocalCardFile, TTSCardImage, SharedCardBack, MappingStatus
 from app.models.errata import Errata, ErrataStatus
+from app.models.errata_draft import ErrataAuditLog, ErrataDraft, ErrataDraftStatus
+from app.models.user import User
+from app.utils.security import decode_token
 from app.schemas.card import CardIndexResponse, CardDetailResponse, LocalCardFileResponse, TTSCardImageResponse
 from app.services.scanner import scan_card_database, detect_double_sided, load_card_content
 from app.services.tts_parser import scan_tts_directory, find_shared_backs
@@ -17,6 +21,23 @@ from app.services.image_cache import download_and_cut_sheet
 from app.services.tts_cache_warmer import get_cache_warm_status, start_tts_cache_warmer
 
 router = APIRouter(prefix="/api/cards", tags=["卡牌"])
+optional_security_scheme = HTTPBearer(auto_error=False)
+
+
+async def optional_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(optional_security_scheme),
+    db: AsyncSession = Depends(get_db),
+) -> User | None:
+    if credentials is None:
+        return None
+    payload = decode_token(credentials.credentials)
+    if payload is None:
+        return None
+    result = await db.execute(select(User).where(User.id == payload["user_id"]))
+    user = result.scalar_one_or_none()
+    if not user or not user.is_active:
+        return None
+    return user
 
 
 def _preview_url_from_path(result_path: str) -> str:
@@ -282,8 +303,14 @@ async def get_filter_options(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/tree")
-async def get_local_card_tree(keyword: str | None = None, db: AsyncSession = Depends(get_db)):
-    """按卡牌数据库目录组织卡牌树，仅包含存在本地 .card 文件的卡牌"""
+async def get_local_card_tree(
+    keyword: str | None = None,
+    scope: str = "all",
+    package_id: int | None = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User | None = Depends(optional_current_user),
+):
+    """按卡牌数据库目录组织卡牌树，仅包含存在本地 .card 文件的卡牌。"""
     query = (
         select(CardIndex, LocalCardFile)
         .join(LocalCardFile, LocalCardFile.arkhamdb_id == CardIndex.arkhamdb_id)
@@ -309,43 +336,75 @@ async def get_local_card_tree(keyword: str | None = None, db: AsyncSession = Dep
             "name_en": card.name_en,
             "category": card.category,
             "cycle": card.cycle,
+            "expansion": card.expansion,
             "mapping_status": card.mapping_status.value,
             "is_double_sided": card.is_double_sided,
             "pending_errata_count": 0,
             "approved_errata_count": 0,
             "latest_batch_id": None,
             "errata_state": "正常",
+            "participant_usernames": [],
+            "package_id": None,
+            "latest_audit_at": None,
             "local_files": [],
         })
         item["local_files"].append(LocalCardFileResponse.model_validate(file_record).model_dump())
 
     if grouped:
-        errata_result = await db.execute(
-            select(
-                Errata.arkhamdb_id,
-                Errata.status,
-                func.count(Errata.id),
-                func.max(Errata.batch_id),
-            )
-            .where(Errata.arkhamdb_id.in_(grouped.keys()))
-            .where(Errata.status.in_([ErrataStatus.PENDING, ErrataStatus.APPROVED]))
-            .group_by(Errata.arkhamdb_id, Errata.status)
+        draft_result = await db.execute(
+            select(ErrataDraft)
+            .where(ErrataDraft.arkhamdb_id.in_(grouped.keys()))
+            .where(ErrataDraft.archived_at.is_(None))
         )
-        for arkhamdb_id, status, count, latest_batch_id in errata_result:
-            item = grouped.get(arkhamdb_id)
-            if not item:
-                continue
-            if status == ErrataStatus.PENDING:
-                item["pending_errata_count"] = count
-            elif status == ErrataStatus.APPROVED:
-                item["approved_errata_count"] = count
-                item["latest_batch_id"] = latest_batch_id
+        drafts = {draft.arkhamdb_id: draft for draft in draft_result.scalars().all()}
 
-        for item in grouped.values():
-            if item["pending_errata_count"] > 0:
-                item["errata_state"] = "勘误中"
-            elif item["approved_errata_count"] > 0:
-                item["errata_state"] = "待发布"
+        audit_result = await db.execute(
+            select(ErrataAuditLog.arkhamdb_id, User.username, func.max(ErrataAuditLog.created_at))
+            .join(User, User.id == ErrataAuditLog.user_id)
+            .where(ErrataAuditLog.arkhamdb_id.in_(grouped.keys()))
+            .group_by(ErrataAuditLog.arkhamdb_id, User.username)
+        )
+        participants: dict[str, list[str]] = {}
+        latest_audit: dict[str, str] = {}
+        for arkhamdb_id, username, created_at in audit_result:
+            participants.setdefault(arkhamdb_id, []).append(username)
+            current_latest = latest_audit.get(arkhamdb_id)
+            created_at_text = created_at.isoformat() if created_at else None
+            if created_at_text and (current_latest is None or created_at_text > current_latest):
+                latest_audit[arkhamdb_id] = created_at_text
+
+        for arkhamdb_id, item in grouped.items():
+            draft = drafts.get(arkhamdb_id)
+            if draft:
+                item["errata_state"] = "待发布" if draft.status == ErrataDraftStatus.WAITING_PUBLISH else "勘误"
+                item["package_id"] = draft.package_id
+                if draft.status == ErrataDraftStatus.ERRATA:
+                    item["pending_errata_count"] = 1
+                elif draft.status == ErrataDraftStatus.WAITING_PUBLISH:
+                    item["approved_errata_count"] = 1
+                    item["latest_batch_id"] = str(draft.package_id) if draft.package_id else None
+            item["participant_usernames"] = sorted(participants.get(arkhamdb_id, []))
+            item["latest_audit_at"] = latest_audit.get(arkhamdb_id)
+
+    if scope == "mine":
+        if current_user is None:
+            grouped = {}
+        else:
+            mine_result = await db.execute(
+                select(ErrataAuditLog.arkhamdb_id).where(ErrataAuditLog.user_id == current_user.id).distinct()
+            )
+            mine_ids = set(mine_result.scalars().all())
+            grouped = {arkhamdb_id: item for arkhamdb_id, item in grouped.items() if arkhamdb_id in mine_ids}
+    elif scope == "review":
+        grouped = {arkhamdb_id: item for arkhamdb_id, item in grouped.items() if item["errata_state"] == "勘误"}
+    elif scope == "package":
+        grouped = {
+            arkhamdb_id: item
+            for arkhamdb_id, item in grouped.items()
+            if package_id is not None and item["package_id"] == package_id
+        }
+    elif scope != "all":
+        raise HTTPException(status_code=400, detail="无效的卡牌列表范围")
 
     tree: list[dict] = []
     category_map: dict[str, dict] = {}
