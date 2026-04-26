@@ -1,3 +1,5 @@
+import uuid
+
 import pytest
 from sqlalchemy import select
 
@@ -8,13 +10,15 @@ from app.utils.security import hash_password
 
 @pytest.mark.asyncio
 async def test_create_errata_draft_with_faces(db):
-    user = User(username="draft-model-user", password_hash=hash_password("pw"), role=UserRole.ERRATA)
+    suffix = uuid.uuid4().hex[:8]
+    arkhamdb_id = f"01{suffix[:3]}"
+    user = User(username=f"draft-model-user-{suffix}", password_hash=hash_password("pw"), role=UserRole.ERRATA)
     db.add(user)
     await db.commit()
     await db.refresh(user)
 
     draft = ErrataDraft(
-        arkhamdb_id="01001",
+        arkhamdb_id=arkhamdb_id,
         status=ErrataDraftStatus.ERRATA,
         original_faces={"a": {"name": "旧正面"}, "b": {"name": "旧背面"}},
         modified_faces={"a": {"name": "新正面"}, "b": {"name": "旧背面"}},
@@ -25,7 +29,7 @@ async def test_create_errata_draft_with_faces(db):
     db.add(draft)
     await db.commit()
 
-    result = await db.execute(select(ErrataDraft).where(ErrataDraft.arkhamdb_id == "01001"))
+    result = await db.execute(select(ErrataDraft).where(ErrataDraft.arkhamdb_id == arkhamdb_id))
     saved = result.scalar_one()
 
     assert saved.status == ErrataDraftStatus.ERRATA
@@ -35,16 +39,18 @@ async def test_create_errata_draft_with_faces(db):
 
 @pytest.mark.asyncio
 async def test_create_waiting_publish_package(db):
-    user = User(username="package-model-user", password_hash=hash_password("pw"), role=UserRole.REVIEWER)
+    suffix = uuid.uuid4().hex[:8]
+    user = User(username=f"package-model-user-{suffix}", password_hash=hash_password("pw"), role=UserRole.REVIEWER)
     db.add(user)
     await db.commit()
     await db.refresh(user)
 
-    package = ErrataPackage(package_no="ERRATA-20260426-001", status=ErrataPackageStatus.WAITING_PUBLISH, created_by=user.id)
+    package_no = f"ERRATA-MODEL-{suffix}"
+    package = ErrataPackage(package_no=package_no, status=ErrataPackageStatus.WAITING_PUBLISH, created_by=user.id)
     db.add(package)
     await db.commit()
 
-    result = await db.execute(select(ErrataPackage).where(ErrataPackage.package_no == "ERRATA-20260426-001"))
+    result = await db.execute(select(ErrataPackage).where(ErrataPackage.package_no == package_no))
     saved = result.scalar_one()
 
     assert saved.status == ErrataPackageStatus.WAITING_PUBLISH
