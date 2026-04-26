@@ -3,6 +3,25 @@
 import json
 from pathlib import Path
 
+from app.services.mapping_index import load_mapping_index
+
+
+def _back_override_for(index: dict, arkhamdb_id: str) -> dict | None:
+    record = index.get("cards", {}).get(arkhamdb_id, {})
+    faces = record.get("faces", {}) if isinstance(record, dict) else {}
+    for face_record in faces.values():
+        if isinstance(face_record, dict) and isinstance(face_record.get("back_override"), dict):
+            return face_record["back_override"]
+    return None
+
+
+def _apply_back_override(sheet: dict, override: dict | None) -> None:
+    if not override or not override.get("back_url"):
+        return
+    sheet["BackURL"] = override["back_url"]
+    sheet["UniqueBack"] = False
+    sheet["BackIsHidden"] = True
+
 
 def generate_tts_bag_json(
     approved_cards: list[dict],
@@ -30,10 +49,25 @@ def generate_tts_bag_json(
         "ContainedObjects_path": "",
     }
 
+    mapping_index = load_mapping_index()
+
     for idx, card in enumerate(approved_cards):
         sheet_name = card.get("sheet_name", "")
         sheet_info = sheet_grids.get(sheet_name, {})
         deck_key = sheet_info.get("deck_key", "10000")
+
+        sheet = {
+            "FaceURL": sheet_urls.get(sheet_name, ""),
+            "BackURL": sheet_urls.get(
+                f"{sheet_name}-back", sheet_urls.get(sheet_name, "")
+            ),
+            "NumWidth": sheet_info.get("width", 10),
+            "NumHeight": sheet_info.get("height", 1),
+            "Type": 0,
+            "UniqueBack": card.get("unique_back", False),
+            "BackIsHidden": True,
+        }
+        _apply_back_override(sheet, _back_override_for(mapping_index, card["arkhamdb_id"]))
 
         card_obj = {
             "Name": "Card",
@@ -44,19 +78,7 @@ def generate_tts_bag_json(
                 {"id": card["arkhamdb_id"]}, ensure_ascii=False
             ),
             "Transform": {"scaleX": 1, "scaleY": 1, "scaleZ": 1},
-            "CustomDeck": {
-                deck_key: {
-                    "FaceURL": sheet_urls.get(sheet_name, ""),
-                    "BackURL": sheet_urls.get(
-                        f"{sheet_name}-back", sheet_urls.get(sheet_name, "")
-                    ),
-                    "NumWidth": sheet_info.get("width", 10),
-                    "NumHeight": sheet_info.get("height", 1),
-                    "Type": 0,
-                    "UniqueBack": card.get("unique_back", False),
-                    "BackIsHidden": True,
-                }
-            },
+            "CustomDeck": {deck_key: sheet},
         }
 
         bag["ContainedObjects_order"].append(
@@ -122,6 +144,7 @@ def replace_chinese_card_urls(
         被修改的文件相对路径列表
     """
     modified = []
+    mapping_index = load_mapping_index()
 
     for json_file in sorted(chinese_root.rglob("*.json")):
         try:
@@ -158,6 +181,8 @@ def replace_chinese_card_urls(
         sheet["BackURL"] = mapping.get("back_url", sheet.get("BackURL", ""))
         sheet["NumWidth"] = mapping.get("grid_w", sheet.get("NumWidth", 10))
         sheet["NumHeight"] = mapping.get("grid_h", sheet.get("NumHeight", 1))
+        sheet["UniqueBack"] = mapping.get("unique_back", sheet.get("UniqueBack", False))
+        _apply_back_override(sheet, _back_override_for(mapping_index, card_id))
         data["CustomDeck"] = {new_deck_key: sheet}
 
         json_file.write_text(

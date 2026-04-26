@@ -100,6 +100,8 @@ async def generate_errata_preview(
     errata = await db.get(Errata, errata_id)
     if not errata:
         raise HTTPException(status_code=404, detail="勘误记录不存在")
+    if current_user.role != UserRole.ADMIN and errata.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="无权预览")
 
     preview_dir = settings.project_root / settings.cache_dir / "previews"
     preview_dir.mkdir(parents=True, exist_ok=True)

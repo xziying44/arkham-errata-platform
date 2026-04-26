@@ -1,7 +1,28 @@
 """卡牌渲染预览服务 - 将 .card JSON 渲染为预览图"""
 
 import json
+import os
+import threading
+from contextlib import contextmanager
 from pathlib import Path
+
+from app.config import settings
+
+
+_render_lock = threading.Lock()
+
+
+@contextmanager
+def _arkham_card_maker_cwd():
+    """临时切换到 arkham-card-maker 根目录，确保字体和图片映射可被加载"""
+    assets_root = settings.project_root.parent / "arkham-card-maker"
+    previous_cwd = os.getcwd()
+    if assets_root.exists():
+        os.chdir(assets_root)
+    try:
+        yield str(assets_root) if assets_root.exists() else ""
+    finally:
+        os.chdir(previous_cwd)
 
 
 def render_card_preview(card_content: dict, output_dir: Path, filename: str) -> str | None:
@@ -18,12 +39,18 @@ def render_card_preview(card_content: dict, output_dir: Path, filename: str) -> 
     try:
         from arkham_card_maker import CardRenderer, RenderOptions
 
-        renderer = CardRenderer()
+        output_dir.mkdir(parents=True, exist_ok=True)
         temp_card = output_dir / f"{filename}.card"
         temp_card.write_text(json.dumps(card_content, ensure_ascii=False), encoding="utf-8")
 
-        options = RenderOptions(dpi=150, format="JPEG", bleed=0)
-        result = renderer.render(str(temp_card), options)
+        with _render_lock:
+            with _arkham_card_maker_cwd() as assets_path:
+                config = {
+                    "encounter_groups_dir": str(settings.project_root.parent / "卡牌数据库" / "exported_icons")
+                }
+                renderer = CardRenderer(assets_path=assets_path or None, config=config)
+                options = RenderOptions(dpi=150, format="JPG", bleed=0)
+                result = renderer.render(str(temp_card), options)
 
         output_path = output_dir / f"{filename}.jpg"
         result.save(str(output_path))

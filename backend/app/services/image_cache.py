@@ -37,10 +37,14 @@ def download_and_cut_sheet(
         return None
 
     x1, y1, x2, y2 = calc_grid_coords(grid_position, grid_width)
-    x2 = min(x2, sheet_img.width)
-    y2 = min(y2, sheet_img.height)
-
-    card_img = sheet_img.crop((x1, y1, x2, y2))
+    if x1 >= sheet_img.width or y1 >= sheet_img.height:
+        card_img = sheet_img.copy()
+    else:
+        x2 = min(x2, sheet_img.width)
+        y2 = min(y2, sheet_img.height)
+        card_img = sheet_img.crop((x1, y1, x2, y2))
+    if card_img.mode not in {"RGB", "L"}:
+        card_img = card_img.convert("RGB")
     expected_path.parent.mkdir(parents=True, exist_ok=True)
     card_img.save(expected_path, "JPEG", quality=90)
     return str(expected_path)

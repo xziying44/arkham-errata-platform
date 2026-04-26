@@ -126,7 +126,10 @@ async def step2_upload(
 
 
 @router.post("/step3-export-tts")
-async def step3_export_tts(body: dict):
+async def step3_export_tts(
+    body: dict,
+    admin: User = Depends(require_admin),
+):
     """步骤3：导出 TTS 存档包 JSON 文件"""
     bag_json = generate_tts_bag_json(
         body["approved_cards"],
@@ -175,10 +178,12 @@ async def step6_replace_urls(
     zh_roots = [
         settings.project_root
         / settings.sced_downloads
+        / "decomposed"
         / "language-pack"
         / "Simplified Chinese - Campaigns",
         settings.project_root
         / settings.sced_downloads
+        / "decomposed"
         / "language-pack"
         / "Simplified Chinese - Player Cards",
     ]

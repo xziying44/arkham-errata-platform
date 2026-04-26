@@ -1,4 +1,5 @@
 import client from './client';
+import type { CardBackPreset, MappingDetail, TTSCardImage } from '../types';
 
 /** 获取待审核的勘误列表 */
 export async function fetchPendingReviews() {
@@ -30,6 +31,16 @@ export async function step2Upload(sheets: unknown[], uploadConfig: Record<string
   return resp.data;
 }
 
+/** 第三步：导出 TTS 存档 JSON */
+export async function step3ExportTTS(approvedCards: unknown[], sheetUrls: Record<string, string>, sheetGrids: Record<string, unknown>) {
+  const resp = await client.post('/admin/publish/step3-export-tts', {
+    approved_cards: approvedCards,
+    sheet_urls: sheetUrls,
+    sheet_grids: sheetGrids,
+  }, { responseType: 'blob' });
+  return resp.data as Blob;
+}
+
 /** 第五步：上传 TTS 导出 JSON 并提取 URL 映射 */
 export async function step5UploadTTSJson(file: File) {
   const form = new FormData();
@@ -41,5 +52,51 @@ export async function step5UploadTTSJson(file: File) {
 /** 第六步：根据 URL 映射替换中文卡图中的图片 URL */
 export async function step6ReplaceUrls(urlMapping: Record<string, unknown>) {
   const resp = await client.post('/admin/publish/step6-replace-urls', { url_mapping: urlMapping });
+  return resp.data;
+}
+
+
+export async function fetchMappingDetail(arkhamdbId: string): Promise<MappingDetail> {
+  const resp = await client.get(`/admin/mapping/${arkhamdbId}`);
+  return resp.data;
+}
+
+export async function searchTTSCandidates(params: { source?: string; keyword?: string; limit?: number }): Promise<{ items: TTSCardImage[] }> {
+  const resp = await client.get('/admin/mapping/search/tts', { params });
+  return resp.data;
+}
+
+export async function bindTTSMapping(body: { arkhamdb_id: string; local_face: string; source: string; tts_id: number; tts_side: string }) {
+  const resp = await client.post('/admin/mapping/bind', body);
+  return resp.data;
+}
+
+export async function unbindTTSMapping(body: { arkhamdb_id: string; local_face: string; source: string }) {
+  const resp = await client.post('/admin/mapping/unbind', body);
+  return resp.data;
+}
+
+export async function swapTTSMapping(body: { arkhamdb_id: string; source: string }) {
+  const resp = await client.post('/admin/mapping/swap', body);
+  return resp.data;
+}
+
+export async function confirmTTSMapping(arkhamdbId: string): Promise<MappingDetail> {
+  const resp = await client.post('/admin/mapping/confirm', { arkhamdb_id: arkhamdbId });
+  return resp.data;
+}
+
+export async function fetchBackPresets(): Promise<{ items: CardBackPreset[] }> {
+  const resp = await client.get('/admin/mapping/back-presets');
+  return resp.data;
+}
+
+export async function setBackOverride(arkhamdbId: string, face: string, presetKey: string): Promise<MappingDetail> {
+  const resp = await client.post(`/admin/mapping/${arkhamdbId}/faces/${face}/back-override`, { preset_key: presetKey });
+  return resp.data;
+}
+
+export async function clearBackOverride(arkhamdbId: string, face: string): Promise<MappingDetail> {
+  const resp = await client.delete(`/admin/mapping/${arkhamdbId}/faces/${face}/back-override`);
   return resp.data;
 }

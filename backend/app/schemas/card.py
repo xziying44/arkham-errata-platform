@@ -1,7 +1,7 @@
 """卡牌 API 的 Pydantic 模式定义"""
 
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
+from typing import Any, Optional
 
 
 class CardIndexResponse(BaseModel):
@@ -51,9 +51,24 @@ class TTSCardImageResponse(BaseModel):
     shared_back_id: int | None
 
 
+class TTSImageMappingResponse(BaseModel):
+    """本地 .card 面到 TTS 卡图面的解析结果"""
+    local_face: str
+    source: str
+    tts_id: int | None
+    tts_side: str
+    image_url: str | None
+    status: str
+    relative_json_path: str | None = None
+    card_id: int | None = None
+
+
 class CardDetailResponse(BaseModel):
     """卡牌详情响应"""
     index: CardIndexResponse
     local_files: list[LocalCardFileResponse]
-    tts_en: Optional[TTSCardImageResponse] = None
-    tts_zh: Optional[TTSCardImageResponse] = None
+    tts_en: list[TTSCardImageResponse] = []
+    tts_zh: list[TTSCardImageResponse] = []
+    image_mappings: list[TTSImageMappingResponse] = []
+    is_single_sided: bool = False
+    back_overrides: dict[str, Any] = {}

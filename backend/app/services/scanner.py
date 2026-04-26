@@ -88,13 +88,15 @@ def detect_double_sided(cards: list[ScannedCard]) -> set[str]:
     face_map: dict[str, set[str]] = {}
     for c in cards:
         face_map.setdefault(c.arkhamdb_id, set()).add(c.face)
-    return {aid for aid, faces in face_map.items() if faces & {"a", "b"}}
+    return {aid for aid, faces in face_map.items() if {"a", "b"} <= faces}
 
 
-def load_card_content(root: Path, relative_path: str) -> dict | None:
-    """加载单张 .card 完整内容（不包含 picture_base64）"""
+def load_card_content(root: Path, relative_path: str, include_picture: bool = False) -> dict | None:
+    """加载单张 .card 内容，默认不包含 picture_base64"""
     filepath = root / relative_path
     if not filepath.exists():
         return None
     data = json.loads(filepath.read_bytes())
+    if include_picture:
+        return data
     return {k: v for k, v in data.items() if k != "picture_base64"}

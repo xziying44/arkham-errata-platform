@@ -1,8 +1,10 @@
 """卡牌 API：初始化编排、浏览、详情、筛选"""
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse
+from pathlib import Path
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_
 from app.database import get_db
 from app.config import settings
 from app.models.card import CardIndex, LocalCardFile, TTSCardImage, SharedCardBack, MappingStatus
@@ -10,8 +12,46 @@ from app.models.errata import Errata
 from app.schemas.card import CardIndexResponse, CardDetailResponse, LocalCardFileResponse, TTSCardImageResponse
 from app.services.scanner import scan_card_database, detect_double_sided, load_card_content
 from app.services.tts_parser import scan_tts_directory, find_shared_backs
+from app.services.mapping_index import get_mapping_detail, resolve_card_image_mappings
+from app.services.image_cache import download_and_cut_sheet
 
 router = APIRouter(prefix="/api/cards", tags=["卡牌"])
+
+
+def _preview_url_from_path(result_path: str) -> str:
+    """将预览图片本机路径转换为浏览器可访问 URL"""
+    try:
+        return f"/static/cache/{Path(result_path).relative_to(settings.project_root / settings.cache_dir)}"
+    except ValueError:
+        return result_path
+
+
+async def _merge_original_picture(
+    db: AsyncSession,
+    arkhamdb_id: str,
+    face: str,
+    content: dict,
+) -> dict:
+    """手动预览时从原始 .card 补回 picture_base64"""
+    if content.get("picture_base64"):
+        return content
+    result = await db.execute(
+        select(LocalCardFile).where(
+            LocalCardFile.arkhamdb_id == arkhamdb_id,
+            LocalCardFile.face == face,
+        )
+    )
+    file_record = result.scalar_one_or_none()
+    if not file_record:
+        return content
+    original = load_card_content(
+        settings.project_root / settings.local_card_db,
+        file_record.relative_path,
+        include_picture=True,
+    )
+    if original and original.get("picture_base64"):
+        return {**content, "picture_base64": original["picture_base64"]}
+    return content
 
 
 async def _ensure_card_index(db: AsyncSession, arkhamdb_id: str) -> CardIndex:
@@ -59,9 +99,14 @@ async def run_full_initialization(db: AsyncSession):
     # 先 flush 本地数据，确保后续 TTS 外键不会冲突
     await db.flush()
 
-    # Step 2: 扫描 TTS 英文
-    en_root = project_root / settings.sced_downloads / "campaign"
-    if en_root.exists():
+    # Step 2: 扫描 TTS 英文。SCED-downloads 只包含剧本英文图，SCED 仓库补充官方英文玩家卡。
+    en_roots = [
+        project_root / settings.sced_downloads / "decomposed" / "campaign",
+        project_root / settings.sced_repo / "objects" / "AllPlayerCards.15bb07",
+    ]
+    for en_root in en_roots:
+        if not en_root.exists():
+            continue
         en_cards = scan_tts_directory(en_root, "英文")
         for ec in en_cards:
             # 为 TTS 卡牌确保 card_index 占位条目存在
@@ -69,8 +114,8 @@ async def run_full_initialization(db: AsyncSession):
 
             tts = await db.execute(
                 select(TTSCardImage).where(
-                    TTSCardImage.arkhamdb_id == ec.arkhamdb_id,
-                    TTSCardImage.source == "英文"
+                    TTSCardImage.source == "英文",
+                    TTSCardImage.relative_json_path == ec.relative_json_path,
                 )
             )
             existing_tts = tts.scalar_one_or_none()
@@ -103,8 +148,8 @@ async def run_full_initialization(db: AsyncSession):
 
     # Step 3: 扫描 TTS 中文
     zh_roots = [
-        project_root / settings.sced_downloads / "language-pack" / "Simplified Chinese - Campaigns",
-        project_root / settings.sced_downloads / "language-pack" / "Simplified Chinese - Player Cards",
+        project_root / settings.sced_downloads / "decomposed" / "language-pack" / "Simplified Chinese - Campaigns",
+        project_root / settings.sced_downloads / "decomposed" / "language-pack" / "Simplified Chinese - Player Cards",
     ]
     for zh_root in zh_roots:
         if zh_root.exists():
@@ -115,8 +160,8 @@ async def run_full_initialization(db: AsyncSession):
 
                 tts = await db.execute(
                     select(TTSCardImage).where(
-                        TTSCardImage.arkhamdb_id == zc.arkhamdb_id,
-                        TTSCardImage.source == "中文"
+                        TTSCardImage.source == "中文",
+                        TTSCardImage.relative_json_path == zc.relative_json_path,
                     )
                 )
                 existing_tts = tts.scalar_one_or_none()
@@ -235,6 +280,62 @@ async def get_filter_options(db: AsyncSession = Depends(get_db)):
     }
 
 
+@router.get("/tree")
+async def get_local_card_tree(keyword: str | None = None, db: AsyncSession = Depends(get_db)):
+    """按卡牌数据库目录组织卡牌树，仅包含存在本地 .card 文件的卡牌"""
+    query = (
+        select(CardIndex, LocalCardFile)
+        .join(LocalCardFile, LocalCardFile.arkhamdb_id == CardIndex.arkhamdb_id)
+    )
+    if keyword:
+        pattern = f"%{keyword}%"
+        query = query.where(
+            or_(
+                CardIndex.arkhamdb_id.ilike(pattern),
+                CardIndex.name_zh.ilike(pattern),
+                CardIndex.name_en.ilike(pattern),
+                LocalCardFile.relative_path.ilike(pattern),
+            )
+        )
+    query = query.order_by(CardIndex.category, CardIndex.cycle, CardIndex.arkhamdb_id, LocalCardFile.face)
+    rows = (await db.execute(query)).all()
+
+    grouped: dict[str, dict] = {}
+    for card, file_record in rows:
+        item = grouped.setdefault(card.arkhamdb_id, {
+            "arkhamdb_id": card.arkhamdb_id,
+            "name_zh": card.name_zh,
+            "name_en": card.name_en,
+            "category": card.category,
+            "cycle": card.cycle,
+            "mapping_status": card.mapping_status.value,
+            "local_files": [],
+        })
+        item["local_files"].append(LocalCardFileResponse.model_validate(file_record).model_dump())
+
+    tree: list[dict] = []
+    category_map: dict[str, dict] = {}
+    cycle_map: dict[tuple[str, str], dict] = {}
+    for item in grouped.values():
+        category = item["category"] or "未分类"
+        cycle = item["cycle"] or "未分组"
+        category_node = category_map.get(category)
+        if not category_node:
+            category_node = {"key": f"category:{category}", "title": category, "children": []}
+            category_map[category] = category_node
+            tree.append(category_node)
+        cycle_key = (category, cycle)
+        cycle_node = cycle_map.get(cycle_key)
+        if not cycle_node:
+            cycle_node = {"key": f"cycle:{category}:{cycle}", "title": cycle, "children": []}
+            cycle_map[cycle_key] = cycle_node
+            category_node["children"].append(cycle_node)
+        title = f"{item['arkhamdb_id']} {item['name_zh'] or item['name_en']}"
+        cycle_node["children"].append({"key": item["arkhamdb_id"], "title": title, "card": item})
+
+    return {"tree": tree, "total": len(grouped)}
+
+
 @router.get("/{arkhamdb_id}", response_model=CardDetailResponse)
 async def get_card_detail(arkhamdb_id: str, db: AsyncSession = Depends(get_db)):
     """获取单张卡牌完整详情"""
@@ -253,7 +354,7 @@ async def get_card_detail(arkhamdb_id: str, db: AsyncSession = Depends(get_db)):
             TTSCardImage.source == "英文"
         )
     )
-    tts_en = en_result.scalar_one_or_none()
+    tts_en = en_result.scalars().all()
 
     zh_result = await db.execute(
         select(TTSCardImage).where(
@@ -261,13 +362,17 @@ async def get_card_detail(arkhamdb_id: str, db: AsyncSession = Depends(get_db)):
             TTSCardImage.source == "中文"
         )
     )
-    tts_zh = zh_result.scalar_one_or_none()
+    tts_zh = zh_result.scalars().all()
 
+    mapping_detail = await get_mapping_detail(db, arkhamdb_id)
     return CardDetailResponse(
         index=CardIndexResponse.model_validate(index),
         local_files=[LocalCardFileResponse.model_validate(f) for f in local_files],
-        tts_en=TTSCardImageResponse.model_validate(tts_en) if tts_en else None,
-        tts_zh=TTSCardImageResponse.model_validate(tts_zh) if tts_zh else None,
+        tts_en=[TTSCardImageResponse.model_validate(t) for t in tts_en],
+        tts_zh=[TTSCardImageResponse.model_validate(t) for t in tts_zh],
+        image_mappings=mapping_detail["image_mappings"],
+        is_single_sided=mapping_detail["is_single_sided"],
+        back_overrides=mapping_detail["back_overrides"],
     )
 
 
@@ -296,6 +401,84 @@ async def get_card_file_content(arkhamdb_id: str, face: str, db: AsyncSession = 
     }
 
 
+@router.post("/{arkhamdb_id}/preview-all")
+async def preview_all_faces(arkhamdb_id: str, db: AsyncSession = Depends(get_db)):
+    """进入编辑页时预渲染本地 .card 的所有面"""
+    from app.services.renderer import render_card_preview
+
+    result = await db.execute(
+        select(LocalCardFile)
+        .where(LocalCardFile.arkhamdb_id == arkhamdb_id)
+        .order_by(LocalCardFile.face)
+    )
+    files = result.scalars().all()
+    if not files:
+        raise HTTPException(status_code=404, detail="本地卡牌文件不存在")
+
+    preview_dir = settings.project_root / settings.cache_dir / "previews"
+    preview_dir.mkdir(parents=True, exist_ok=True)
+    items = []
+    for file_record in files:
+        content = load_card_content(
+            settings.project_root / settings.local_card_db,
+            file_record.relative_path,
+            include_picture=True,
+        )
+        if not content:
+            items.append({"face": file_record.face, "relative_path": file_record.relative_path, "preview_url": None, "error": "无法读取文件内容"})
+            continue
+        result_path = render_card_preview(content, preview_dir, f"{arkhamdb_id}_{file_record.face}")
+        items.append({
+            "face": file_record.face,
+            "relative_path": file_record.relative_path,
+            "preview_url": _preview_url_from_path(result_path) if result_path else None,
+            "error": None if result_path else "渲染失败",
+        })
+
+    return {"items": items}
+
+
+@router.get("/tts-images/{tts_id}/{side}")
+async def get_tts_image(tts_id: int, side: str, db: AsyncSession = Depends(get_db)):
+    """按需裁切并返回 TTS 单张卡图"""
+    if side not in {"front", "back"}:
+        raise HTTPException(status_code=400, detail="卡图面必须是 front 或 back")
+
+    tts = await db.get(TTSCardImage, tts_id)
+    if not tts:
+        raise HTTPException(status_code=404, detail="TTS 卡图不存在")
+
+    cached_path = tts.cached_front_path if side == "front" else tts.cached_back_path
+    if cached_path:
+        path = settings.project_root / cached_path
+        if path.exists():
+            return FileResponse(path, media_type="image/jpeg")
+
+    sheet_url = tts.face_url if side == "front" else tts.back_url
+    if not sheet_url:
+        raise HTTPException(status_code=404, detail="TTS 卡图 URL 不存在")
+    cache_dir = settings.project_root / settings.cache_dir / "tts"
+    cache_key = f"{tts.source}_{tts.id}_{side}"
+    generated_path = download_and_cut_sheet(
+        sheet_url=sheet_url,
+        grid_position=tts.grid_position,
+        grid_width=tts.grid_width,
+        grid_height=tts.grid_height,
+        cache_dir=cache_dir,
+        cache_key=cache_key,
+    )
+    if not generated_path:
+        raise HTTPException(status_code=502, detail="下载或裁切 TTS 卡图失败")
+
+    relative_path = str(Path(generated_path).relative_to(settings.project_root))
+    if side == "front":
+        tts.cached_front_path = relative_path
+    else:
+        tts.cached_back_path = relative_path
+    await db.commit()
+    return FileResponse(generated_path, media_type="image/jpeg")
+
+
 @router.post("/preview")
 async def preview_card(body: dict, db: AsyncSession = Depends(get_db)):
     """预览渲染卡牌"""
@@ -306,12 +489,16 @@ async def preview_card(body: dict, db: AsyncSession = Depends(get_db)):
 
     arkhamdb_id = body.get("arkhamdb_id", "preview")
     card_content = body.get("content", {})
+    source_id, source_face = str(arkhamdb_id), "a"
+    if "_" in source_id:
+        source_id, source_face = source_id.rsplit("_", 1)
+    card_content = await _merge_original_picture(db, source_id, source_face, card_content)
 
     result_path = render_card_preview(card_content, preview_dir, arkhamdb_id)
     if result_path is None:
         raise HTTPException(status_code=500, detail="渲染失败")
 
-    return {"preview_path": result_path}
+    return {"preview_path": result_path, "preview_url": _preview_url_from_path(result_path)}
 
 
 @router.post("/rescan")

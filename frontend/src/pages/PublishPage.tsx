@@ -4,6 +4,7 @@ import { UploadOutlined } from '@ant-design/icons';
 import {
   step1GenerateSheets,
   step2Upload,
+  step3ExportTTS,
   step5UploadTTSJson,
   step6ReplaceUrls,
 } from '../api/admin';
@@ -13,6 +14,7 @@ export default function PublishPage() {
   const [current, setCurrent] = useState(0);
   const [batchId, setBatchId] = useState('');
   const [sheets, setSheets] = useState<any[]>([]);
+  const [sheetUrls, setSheetUrls] = useState<Record<string, string>>({});
   const [urlMapping, setUrlMapping] = useState<Record<string, unknown> | null>(null);
   const [modifiedCount, setModifiedCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -38,11 +40,47 @@ export default function PublishPage() {
   const handleStep2 = async () => {
     setLoading(true);
     try {
-      await step2Upload(sheets, { image_host: 'local' });
+      const data = await step2Upload(sheets, { image_host: 'local' });
+      setSheetUrls(data.urls || {});
       message.success('上传完成');
       setCurrent(2);
     } catch {
       message.error('上传失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /** 第三步：导出 TTS 存档 JSON 并下载 */
+  const handleStep3 = async () => {
+    setLoading(true);
+    try {
+      const approvedCards = sheets.flatMap((sheet) =>
+        (sheet.card_ids || []).map((arkhamdbId: string, index: number) => ({
+          arkhamdb_id: arkhamdbId,
+          name_zh: arkhamdbId,
+          sheet_name: sheet.sheet_name,
+          unique_back: Boolean(sheet.back_sheet),
+          grid_position: index,
+        }))
+      );
+      const sheetGrids = Object.fromEntries(
+        sheets.map((sheet) => [
+          sheet.sheet_name,
+          { deck_key: sheet.sheet_name.replace(/\D/g, '').slice(0, 5) || '10000', width: 10, height: Math.ceil((sheet.card_ids?.length || 1) / 10) },
+        ])
+      );
+      const blob = await step3ExportTTS(approvedCards, sheetUrls, sheetGrids);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = '勘误发布包.json';
+      link.click();
+      URL.revokeObjectURL(url);
+      message.success('TTS 存档已导出');
+      setCurrent(3);
+    } catch (e: any) {
+      message.error(e?.response?.data?.detail || '导出失败');
     } finally {
       setLoading(false);
     }
@@ -101,8 +139,8 @@ export default function PublishPage() {
     {
       title: '下载TTS存档',
       content: (
-        <Button type="primary" onClick={() => setCurrent(3)}>
-          已下载，下一步
+        <Button type="primary" onClick={handleStep3} loading={loading} disabled={Object.keys(sheetUrls).length === 0}>
+          导出并下载 TTS 存档
         </Button>
       ),
     },

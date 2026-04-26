@@ -25,3 +25,11 @@ def test_render_card_preview_no_module():
             assert Path(result).exists()
         # 如果返回 None（ImportError），同样视为正常行为
         # 系统会在有 arkham_card_maker 的环境中生成真实预览图
+
+
+def test_render_card_preview_uses_supported_jpg_format():
+    """arkham-card-maker 的 API 接受 JPG，不接受 JPEG"""
+    content = {"type": "事件卡", "class": "中立", "name": "测试", "body": "测试正文", "traits": []}
+    with tempfile.TemporaryDirectory() as tmpdir:
+        result = render_card_preview(content, Path(tmpdir), "format_check")
+        assert result is None or result.endswith(".jpg")

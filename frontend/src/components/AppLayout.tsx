@@ -3,7 +3,6 @@ import { Layout, Menu, Button } from 'antd';
 import { useAuth } from '../hooks/useAuth';
 import { ProtectedRoute, AdminRoute } from './ProtectedRoute';
 import CardBrowserPage from '../pages/CardBrowserPage';
-import ErrataEditorPage from '../pages/ErrataEditorPage';
 import ReviewPage from '../pages/ReviewPage';
 import MappingPage from '../pages/MappingPage';
 import PublishPage from '../pages/PublishPage';
@@ -41,7 +40,7 @@ export default function AppLayout() {
       <Content style={{ padding: 24 }}>
         <Routes>
           <Route path="/cards" element={<ProtectedRoute><CardBrowserPage /></ProtectedRoute>} />
-          <Route path="/errata/:arkhamdbId" element={<ProtectedRoute><ErrataEditorPage /></ProtectedRoute>} />
+          <Route path="/errata/:arkhamdbId" element={<ProtectedRoute><CardBrowserPage /></ProtectedRoute>} />
           <Route path="/my-errata" element={<ProtectedRoute><div style={{ padding: 24 }}>我的勘误（开发中）</div></ProtectedRoute>} />
           <Route path="/admin/review" element={<AdminRoute><ReviewPage /></AdminRoute>} />
           <Route path="/admin/mapping" element={<AdminRoute><MappingPage /></AdminRoute>} />

@@ -1,51 +1,45 @@
-import { Row, Col, Image, Empty, Typography } from 'antd';
+import type { ReactNode } from 'react';
+import { Card, Col, Empty, Image, Row, Typography } from 'antd';
 
 const { Text } = Typography;
 
-interface Props {
-  englishImageUrl: string | null;
-  chineseImageUrl: string | null;
-  previewImageUrl: string | null;
+export interface ImageSlot {
+  key: string;
+  title: string;
+  url: string | null;
+  error?: string | null;
+  footer?: ReactNode;
 }
 
-/** 三栏卡牌对比视图：英文 TTS 卡图 | 中文 TTS 卡图（当前）| 修改后预览 */
-export default function CardComparison({ englishImageUrl, chineseImageUrl, previewImageUrl }: Props) {
+interface Props {
+  images: ImageSlot[];
+}
+
+/** 六图卡牌对比视图：英文/中文参考只读，本地渲染展示预发布结果 */
+export default function CardComparison({ images }: Props) {
+  const safeImages = images ?? [];
   return (
-    <Row gutter={16}>
-      <Col span={8}>
-        <div style={{ textAlign: 'center' }}>
-          <Text strong>英文 TTS 卡图</Text>
-          {englishImageUrl ? (
-            <Image
-              src={englishImageUrl}
-              style={{ width: '100%' }}
-              fallback="data:image/png;base64,iVBORw0KGgo="
-            />
-          ) : (
-            <Empty description="暂无英文卡图" />
-          )}
-        </div>
-      </Col>
-      <Col span={8}>
-        <div style={{ textAlign: 'center' }}>
-          <Text strong>中文 TTS 卡图（当前）</Text>
-          {chineseImageUrl ? (
-            <Image src={chineseImageUrl} style={{ width: '100%' }} />
-          ) : (
-            <Empty description="暂无中文卡图" />
-          )}
-        </div>
-      </Col>
-      <Col span={8}>
-        <div style={{ textAlign: 'center' }}>
-          <Text strong>修改后预览</Text>
-          {previewImageUrl ? (
-            <Image src={previewImageUrl} style={{ width: '100%' }} />
-          ) : (
-            <Empty description="点击预览按钮生成" />
-          )}
-        </div>
-      </Col>
-    </Row>
+    <Image.PreviewGroup>
+      <Row gutter={[12, 12]}>
+        {safeImages.map((item) => (
+          <Col span={8} key={item.key}>
+            <Card size="small" bodyStyle={{ padding: 8, textAlign: 'center' }}>
+              <Text strong>{item.title}</Text>
+              <div style={{ marginTop: 8, minHeight: 260, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {item.url ? (
+                  <Image
+                    src={item.url}
+                    style={{ width: '50%', minWidth: 160, maxWidth: 260 }}
+                  />
+                ) : (
+                  <Empty description={item.error || '暂无图片'} />
+                )}
+              </div>
+              {item.footer ? <div style={{ marginTop: 8 }}>{item.footer}</div> : null}
+            </Card>
+          </Col>
+        ))}
+      </Row>
+    </Image.PreviewGroup>
   );
 }

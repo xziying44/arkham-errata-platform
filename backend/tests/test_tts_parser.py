@@ -25,6 +25,7 @@ SAMPLE_CARD = {
 def test_extract_arkhamdb_id():
     assert extract_arkhamdb_id('{"id": "01150"}') == "01150"
     assert extract_arkhamdb_id('{"id": "01033-t"}') == "01033-t"
+    assert extract_arkhamdb_id('{"id": "7f2a7b44-7e7d-4523-8709-f90177100575"}') is None
     assert extract_arkhamdb_id("{}") is None
 
 
@@ -54,3 +55,38 @@ def test_scan_tts_directory():
         cards = scan_tts_directory(root, "英文")
         assert len(cards) == 1
         assert cards[0].arkhamdb_id == "01150"
+
+
+def test_parse_tts_card_json_reads_companion_gmnotes():
+    """英文 SCED 数据常把 GMNotes 放在同名 .gmnotes 文件中"""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        filepath = root / "Study.377b20.json"
+        card_data = dict(SAMPLE_CARD)
+        card_data.pop("GMNotes")
+        card_data["GMNotes_path"] = "Study.377b20.gmnotes"
+        filepath.write_text(json.dumps(card_data), encoding="utf-8")
+        filepath.with_suffix(".gmnotes").write_text(
+            json.dumps({"id": "01111", "type": "Location"}), encoding="utf-8"
+        )
+
+        card = parse_tts_card_json(filepath, "英文", root)
+
+        assert card is not None
+        assert card.arkhamdb_id == "01111"
+
+
+def test_scan_sced_player_card_fixture_if_present():
+    from app.config import settings
+
+    root = settings.project_root / settings.sced_repo / "objects" / "AllPlayerCards.15bb07"
+    if not root.exists():
+        return
+
+    cards = scan_tts_directory(root, "英文")
+    roland_cards = [card for card in cards if card.arkhamdb_id == "01001"]
+
+    assert roland_cards
+    assert any(card.relative_json_path == "RolandBanks.9e9e98/RolandBanks.a684e0.json" for card in roland_cards)
+    assert all(not Path(card.relative_json_path).is_absolute() for card in roland_cards)
+    assert all("SCED/objects/AllPlayerCards.15bb07" not in card.relative_json_path for card in roland_cards)

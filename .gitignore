@@ -36,3 +36,21 @@ frontend/dist/
 # Cache
 data/cache/*
 !data/cache/.gitkeep
+# Local generated data
+.superpowers/
+**/.DS_Store
+data/cache/**
+data/*.backup-*.json
+data/*.manual-backup-*.json
+data/*_preview.json
+data/*_diff*.json
+data/*.log
+!data/mapping_index.json
+# Local reports and debug outputs
+data/debug/**
+data/*.csv
+data/*.html
+data/*import*.json
+data/test_chunk.json
+data/*.pid
+data/*.patch

@@ -29,7 +29,36 @@ export interface LocalCardFile {
   content: Record<string, unknown>;
 }
 
+
+export interface CardBackPreset {
+  key: string;
+  label: string;
+  back_url: string;
+  description: string;
+}
+
+export interface CardBackOverride {
+  preset_key: string;
+  label: string;
+  back_url: string;
+  source: string;
+  reason: string;
+  updated_by: string;
+  updated_at: string;
+}
+
 /** TTS 卡牌图片映射 */
+export interface TTSImageMapping {
+  local_face: string;
+  source: '英文' | '中文';
+  tts_id: number | null;
+  tts_side: 'front' | 'back';
+  image_url: string | null;
+  status: '已绑定' | '自动候选' | '未找到';
+  relative_json_path: string | null;
+  card_id: number | null;
+}
+
 export interface TTSCardImage {
   id: number;
   arkhamdb_id: string;
@@ -67,6 +96,50 @@ export interface Errata {
 export interface CardDetail {
   index: CardIndex;
   local_files: LocalCardFile[];
-  tts_en: TTSCardImage | null;
-  tts_zh: TTSCardImage | null;
+  tts_en: TTSCardImage[];
+  tts_zh: TTSCardImage[];
+  image_mappings: TTSImageMapping[];
+  is_single_sided: boolean;
+  back_overrides: Record<string, CardBackOverride | null>;
+}
+
+export interface CardTreeCard extends CardIndex {
+  local_files: LocalCardFile[];
+}
+
+export interface CardTreeNode {
+  key: string;
+  title: string;
+  children?: CardTreeNode[];
+  card?: CardTreeCard;
+}
+
+export interface CardTreeResponse {
+  tree: CardTreeNode[];
+  total: number;
+}
+
+export interface PreviewFace {
+  face: string;
+  relative_path: string;
+  preview_url: string | null;
+  error: string | null;
+}
+
+export interface PreviewAllResponse {
+  items: PreviewFace[];
+}
+
+
+export interface MappingDetail {
+  arkhamdb_id: string;
+  card: CardIndex | null;
+  local_files: LocalCardFile[];
+  image_mappings: TTSImageMapping[];
+  is_single_sided: boolean;
+  back_overrides: Record<string, CardBackOverride | null>;
+  confirmed: boolean;
+  confirmed_by: string | null;
+  confirmed_at: string | null;
+  index_path: string;
 }

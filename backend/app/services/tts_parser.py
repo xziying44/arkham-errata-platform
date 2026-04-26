@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Optional
@@ -34,7 +35,35 @@ def parse_gmnotes(gmnotes_raw: str) -> dict:
 def extract_arkhamdb_id(gmnotes_raw: str) -> Optional[str]:
     """从 GMNotes 提取 arkhamdb id"""
     data = parse_gmnotes(gmnotes_raw)
-    return data.get("id")
+    card_id = data.get("id")
+    if not isinstance(card_id, str):
+        return None
+    if not re.fullmatch(r"[A-Za-z0-9]+(?:-[A-Za-z0-9]+)?", card_id):
+        return None
+    if len(card_id) > 16:
+        return None
+    return card_id
+
+
+def load_gmnotes(data: dict, filepath: Path, root: Path) -> str:
+    """读取 TTS 卡牌的 GMNotes，兼容内嵌字段和伴生 .gmnotes 文件"""
+    gmnotes = data.get("GMNotes")
+    if gmnotes:
+        return gmnotes
+
+    candidates = [filepath.with_suffix(".gmnotes")]
+    gmnotes_path = data.get("GMNotes_path")
+    if gmnotes_path:
+        candidates.append(root / gmnotes_path)
+        candidates.append(filepath.parent / Path(gmnotes_path).name)
+
+    for candidate in candidates:
+        if candidate.exists():
+            try:
+                return candidate.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                continue
+    return "{}"
 
 
 def parse_tts_card_json(filepath: Path, source: str, root: Path) -> Optional[ParsedTTSCard]:
@@ -46,10 +75,10 @@ def parse_tts_card_json(filepath: Path, source: str, root: Path) -> Optional[Par
     except (json.JSONDecodeError, UnicodeDecodeError):
         return None
 
-    if data.get("Name") != "Card":
+    if data.get("Name") not in {"Card", "CardCustom"}:
         return None
 
-    gmnotes = data.get("GMNotes", "{}")
+    gmnotes = load_gmnotes(data, filepath, root)
     arkhamdb_id = extract_arkhamdb_id(gmnotes)
     if not arkhamdb_id:
         return None
