@@ -78,3 +78,84 @@ class ErrataPackage(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
     published_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class PublishSessionStatus(str, enum.Enum):
+    DRAFT = "草稿"
+    GENERATING = "生成中"
+    SHEETS_READY = "待确认精灵图"
+    URLS_READY = "待准备URL"
+    PATCH_READY = "待导出补丁"
+    COMPLETED = "已完成"
+    SUPERSEDED = "已废弃"
+    FAILED = "失败"
+
+
+class PublishArtifactKind(str, enum.Enum):
+    CARD_IMAGE = "card_image"
+    SHEET_FRONT = "sheet_front"
+    SHEET_BACK = "sheet_back"
+    TTS_BAG = "tts_bag"
+    URL_MAPPING = "url_mapping"
+    PATCH_ZIP = "patch_zip"
+    MANIFEST = "manifest"
+    REPORT = "report"
+
+
+class PublishArtifactStatus(str, enum.Enum):
+    ACTIVE = "active"
+    CONFIRMED = "confirmed"
+    SUPERSEDED = "superseded"
+    DELETED = "deleted"
+    FAILED = "failed"
+
+
+class PublishDirectoryTargetArea(str, enum.Enum):
+    CAMPAIGNS = "campaigns"
+    PLAYER_CARDS = "player_cards"
+
+
+class PublishSession(Base):
+    __tablename__ = "publish_sessions"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    package_id: Mapped[int] = mapped_column(Integer, ForeignKey("errata_packages.id"), nullable=False, index=True)
+    status: Mapped[PublishSessionStatus] = mapped_column(SAEnum(PublishSessionStatus), nullable=False, index=True)
+    current_step: Mapped[str] = mapped_column(String(64), nullable=False, default="select_package")
+    artifact_root: Mapped[str] = mapped_column(String(512), nullable=False)
+    created_by: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
+    updated_by: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    cleanup_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
+class PublishArtifact(Base):
+    __tablename__ = "publish_artifacts"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    session_id: Mapped[int] = mapped_column(Integer, ForeignKey("publish_sessions.id"), nullable=False, index=True)
+    kind: Mapped[PublishArtifactKind] = mapped_column(SAEnum(PublishArtifactKind), nullable=False, index=True)
+    status: Mapped[PublishArtifactStatus] = mapped_column(SAEnum(PublishArtifactStatus), nullable=False, index=True)
+    path: Mapped[str] = mapped_column(String(512), nullable=False)
+    public_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    checksum: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    artifact_metadata: Mapped[dict] = mapped_column("metadata", JSON, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
+class PublishDirectoryPreset(Base):
+    __tablename__ = "publish_directory_presets"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    local_dir_prefix: Mapped[str] = mapped_column(String(256), nullable=False, unique=True, index=True)
+    target_area: Mapped[PublishDirectoryTargetArea] = mapped_column(SAEnum(PublishDirectoryTargetArea), nullable=False, index=True)
+    target_bag_path: Mapped[str] = mapped_column(String(512), nullable=False)
+    target_bag_guid: Mapped[str] = mapped_column(String(16), nullable=False)
+    target_object_dir: Mapped[str] = mapped_column(String(256), nullable=False)
+    label: Mapped[str] = mapped_column(String(256), nullable=False)
+    is_active: Mapped[bool] = mapped_column(default=True, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())

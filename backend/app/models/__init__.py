@@ -8,6 +8,13 @@ from app.models.errata_draft import (
     ErrataAuditAction,
     ErrataPackage,
     ErrataPackageStatus,
+    PublishArtifact,
+    PublishArtifactKind,
+    PublishArtifactStatus,
+    PublishDirectoryPreset,
+    PublishDirectoryTargetArea,
+    PublishSession,
+    PublishSessionStatus,
 )
 
 __all__ = [
@@ -16,4 +23,7 @@ __all__ = [
     "Errata", "ErrataStatus",
     "ErrataDraft", "ErrataDraftStatus", "ErrataAuditLog", "ErrataAuditAction",
     "ErrataPackage", "ErrataPackageStatus",
+    "PublishArtifact", "PublishArtifactKind", "PublishArtifactStatus",
+    "PublishDirectoryPreset", "PublishDirectoryTargetArea",
+    "PublishSession", "PublishSessionStatus",
 ]
