@@ -115,3 +115,14 @@ async def add_artifact(
     db.add(artifact)
     await db.flush()
     return artifact
+
+
+async def supersede_artifacts_after_step(db: AsyncSession, session_id: int, kinds: set[PublishArtifactKind]) -> None:
+    result = await db.execute(
+        select(PublishArtifact)
+        .where(PublishArtifact.session_id == session_id)
+        .where(PublishArtifact.kind.in_(kinds))
+        .where(PublishArtifact.status.in_({PublishArtifactStatus.ACTIVE, PublishArtifactStatus.CONFIRMED}))
+    )
+    for artifact in result.scalars().all():
+        artifact.status = PublishArtifactStatus.SUPERSEDED

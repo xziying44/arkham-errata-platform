@@ -2,13 +2,14 @@
 
 import json
 import shutil
+from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database import get_db
 from app.models.card import CardIndex
-from app.models.errata_draft import ErrataDraft, ErrataPackage, ErrataPackageStatus, PublishArtifact, PublishSession
+from app.models.errata_draft import ErrataDraft, ErrataPackage, ErrataPackageStatus, PublishArtifact, PublishArtifactKind, PublishArtifactStatus, PublishSession, PublishSessionStatus
 from app.models.user import User
 from app.api.auth import require_admin
 from app.services.sheet_generator import create_decksheet, group_cards_by_sheet
@@ -21,7 +22,7 @@ from app.services.url_replacer import (
 from app.services.renderer import render_card_preview
 from app.config import settings
 from app.schemas.publish import PublishSessionCreateRequest
-from app.services.publish_sessions import create_publish_session, list_session_artifacts, load_publish_session
+from app.services.publish_sessions import add_artifact, create_publish_session, list_session_artifacts, load_publish_session, supersede_artifacts_after_step
 
 router = APIRouter(prefix="/api/admin/publish", tags=["发布"])
 
@@ -74,6 +75,86 @@ async def get_session(
     admin: User = Depends(require_admin),
 ):
     session = await load_publish_session(db, session_id)
+    return await serialize_publish_session(db, session)
+
+
+@router.post("/sessions/{session_id}/generate-sheets")
+async def generate_session_sheets(
+    session_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    session = await load_publish_session(db, session_id)
+    _package, drafts = await load_publish_package(db, session.package_id)
+    await supersede_artifacts_after_step(
+        db,
+        session.id,
+        {
+            PublishArtifactKind.CARD_IMAGE,
+            PublishArtifactKind.SHEET_FRONT,
+            PublishArtifactKind.SHEET_BACK,
+            PublishArtifactKind.MANIFEST,
+            PublishArtifactKind.URL_MAPPING,
+            PublishArtifactKind.PATCH_ZIP,
+            PublishArtifactKind.REPORT,
+        },
+    )
+
+    root = settings.project_root / session.artifact_root
+    cards_dir = root / "cards"
+    sheets_dir = root / "sheets"
+    cards_dir.mkdir(parents=True, exist_ok=True)
+    sheets_dir.mkdir(parents=True, exist_ok=True)
+
+    card_images = []
+    for draft in drafts:
+        faces = draft.modified_faces or {}
+        front = faces.get("a") or next(iter(faces.values()), {})
+        if not isinstance(front, dict):
+            front = {}
+        back = faces.get("b")
+        front_path = render_card_preview(front, cards_dir, f"{draft.arkhamdb_id}_a")
+        await add_artifact(db, session, PublishArtifactKind.CARD_IMAGE, Path(front_path), {"arkhamdb_id": draft.arkhamdb_id, "face": "a"})
+        back_path = None
+        if isinstance(back, dict):
+            back_path = render_card_preview(back, cards_dir, f"{draft.arkhamdb_id}_b")
+            await add_artifact(db, session, PublishArtifactKind.CARD_IMAGE, Path(back_path), {"arkhamdb_id": draft.arkhamdb_id, "face": "b"})
+        card_images.append({
+            "arkhamdb_id": draft.arkhamdb_id,
+            "front_path": front_path,
+            "back_path": back_path,
+            "name_zh": front.get("name", ""),
+            "unique_back": isinstance(back, dict),
+        })
+
+    sheets = group_cards_by_sheet(card_images, max_per_sheet=30)
+    for sheet in sheets:
+        grid_height = max(1, (len(sheet["arkhamdb_ids"]) + 9) // 10)
+        front_sheet_path = sheets_dir / f"{sheet['sheet_name']}.jpg"
+        create_decksheet(sheet["front_images"], output_path=str(front_sheet_path))
+        await add_artifact(
+            db,
+            session,
+            PublishArtifactKind.SHEET_FRONT,
+            front_sheet_path,
+            {"sheet_name": sheet["sheet_name"], "card_ids": sheet["arkhamdb_ids"], "grid_width": 10, "grid_height": grid_height},
+        )
+        if any(sheet["back_images"]):
+            back_sheet_path = sheets_dir / f"{sheet['sheet_name']}-back.jpg"
+            create_decksheet(sheet["back_images"], output_path=str(back_sheet_path))
+            await add_artifact(
+                db,
+                session,
+                PublishArtifactKind.SHEET_BACK,
+                back_sheet_path,
+                {"sheet_name": f"{sheet['sheet_name']}-back", "front_sheet_name": sheet["sheet_name"], "card_ids": sheet["arkhamdb_ids"], "grid_width": 10, "grid_height": grid_height},
+            )
+
+    session.status = PublishSessionStatus.SHEETS_READY
+    session.current_step = "confirm_sheets"
+    session.updated_by = admin.id
+    await db.commit()
+    await db.refresh(session)
     return await serialize_publish_session(db, session)
 
 

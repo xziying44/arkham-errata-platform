@@ -124,3 +124,45 @@ async def test_cannot_create_second_active_session_for_same_package(client: Asyn
     assert first.status_code == 200
     assert second.status_code == 409
     assert second.json()["detail"] == "当前勘误包已有未完成发布会话"
+
+from app.models.errata_draft import ErrataDraft, ErrataDraftStatus
+
+
+@pytest.mark.asyncio
+async def test_generate_sheets_creates_session_artifacts(client: AsyncClient, db, monkeypatch, tmp_path):
+    token, admin = await _admin_token(client, db)
+    package = ErrataPackage(package_no=f"ERRATA-SHEETS-{uuid.uuid4().hex[:6]}", status=ErrataPackageStatus.WAITING_PUBLISH, created_by=admin.id)
+    db.add(package)
+    await db.flush()
+    draft = ErrataDraft(
+        arkhamdb_id="01104",
+        status=ErrataDraftStatus.WAITING_PUBLISH,
+        original_faces={},
+        modified_faces={"a": {"name": "测试正面"}, "b": {"name": "测试背面"}},
+        changed_faces=["a", "b"],
+        package_id=package.id,
+        created_by=admin.id,
+        updated_by=admin.id,
+    )
+    db.add(draft)
+    await db.commit()
+    await db.refresh(package)
+
+    def fake_render(content, output_dir, filename):
+        from PIL import Image
+        path = output_dir / f"{filename}.jpg"
+        Image.new("RGB", (750, 1050), (255, 255, 255)).save(path)
+        return str(path)
+
+    monkeypatch.setattr("app.api.publish.render_card_preview", fake_render)
+    session_response = await client.post("/api/admin/publish/sessions", headers={"Authorization": f"Bearer {token}"}, json={"package_id": package.id})
+    session_id = session_response.json()["id"]
+
+    response = await client.post(f"/api/admin/publish/sessions/{session_id}/generate-sheets", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "待确认精灵图"
+    kinds = {artifact["kind"] for artifact in data["artifacts"]}
+    assert "sheet_front" in kinds
+    assert "sheet_back" in kinds
