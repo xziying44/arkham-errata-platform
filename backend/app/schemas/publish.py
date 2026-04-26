@@ -34,3 +34,26 @@ class PublishSessionResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     artifacts: list[PublishArtifactResponse] = []
+
+
+class PublishDirectoryPresetResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    local_dir_prefix: str
+    target_area: str
+    target_bag_path: str
+    target_bag_guid: str
+    target_object_dir: str
+    label: str
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class PublishDirectoryPresetUpdateRequest(BaseModel):
+    target_bag_path: str | None = None
+    target_bag_guid: str | None = None
+    target_object_dir: str | None = None
+    label: str | None = None
+    is_active: bool | None = None

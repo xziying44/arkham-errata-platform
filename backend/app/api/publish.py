@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database import get_db
 from app.models.card import CardIndex
-from app.models.errata_draft import ErrataDraft, ErrataPackage, ErrataPackageStatus, PublishArtifact, PublishArtifactKind, PublishArtifactStatus, PublishSession, PublishSessionStatus
+from app.models.errata_draft import ErrataDraft, ErrataPackage, ErrataPackageStatus, PublishArtifact, PublishArtifactKind, PublishArtifactStatus, PublishDirectoryPreset, PublishSession, PublishSessionStatus
 from app.models.user import User
 from app.api.auth import require_admin
 from app.services.sheet_generator import create_decksheet, group_cards_by_sheet
@@ -21,10 +21,53 @@ from app.services.url_replacer import (
 )
 from app.services.renderer import render_card_preview
 from app.config import settings
-from app.schemas.publish import PublishSessionCreateRequest
+from app.schemas.publish import PublishDirectoryPresetUpdateRequest, PublishSessionCreateRequest
 from app.services.publish_sessions import add_artifact, create_publish_session, list_session_artifacts, load_publish_session, supersede_artifacts_after_step
 
 router = APIRouter(prefix="/api/admin/publish", tags=["发布"])
+
+
+def serialize_directory_preset(preset: PublishDirectoryPreset) -> dict:
+    return {
+        "id": preset.id,
+        "local_dir_prefix": preset.local_dir_prefix,
+        "target_area": preset.target_area.value,
+        "target_bag_path": preset.target_bag_path,
+        "target_bag_guid": preset.target_bag_guid,
+        "target_object_dir": preset.target_object_dir,
+        "label": preset.label,
+        "is_active": preset.is_active,
+        "created_at": preset.created_at,
+        "updated_at": preset.updated_at,
+    }
+
+
+@router.get("/directory-presets")
+async def list_directory_presets(
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    result = await db.execute(select(PublishDirectoryPreset).order_by(PublishDirectoryPreset.local_dir_prefix))
+    return {"items": [serialize_directory_preset(preset) for preset in result.scalars().all()]}
+
+
+@router.patch("/directory-presets/{preset_id}")
+async def update_directory_preset(
+    preset_id: int,
+    body: PublishDirectoryPresetUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    preset = await db.get(PublishDirectoryPreset, preset_id)
+    if preset is None:
+        raise HTTPException(status_code=404, detail="发布目录预设不存在")
+    for field in ["target_bag_path", "target_bag_guid", "target_object_dir", "label", "is_active"]:
+        value = getattr(body, field)
+        if value is not None:
+            setattr(preset, field, value)
+    await db.commit()
+    await db.refresh(preset)
+    return serialize_directory_preset(preset)
 
 
 def serialize_publish_artifact(artifact: PublishArtifact) -> dict:
