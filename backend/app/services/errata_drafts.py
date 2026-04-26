@@ -55,6 +55,16 @@ async def load_original_faces(db: AsyncSession, arkhamdb_id: str) -> dict[str, d
     return {card_file.face: _read_local_card_content(card_file.relative_path) for card_file in files}
 
 
+
+def merge_original_picture_for_face(original_faces: dict[str, dict], face: str, content: dict) -> dict:
+    """渲染勘误副本时从原始面补回 picture_base64，避免背景图丢失。"""
+    if not isinstance(content, dict) or content.get("picture_base64"):
+        return content
+    original = original_faces.get(face) if isinstance(original_faces, dict) else None
+    if isinstance(original, dict) and original.get("picture_base64"):
+        return {**content, "picture_base64": original["picture_base64"]}
+    return content
+
 def ensure_draft_editable(draft: ErrataDraft) -> None:
     if draft.status == ErrataDraftStatus.WAITING_PUBLISH:
         raise HTTPException(status_code=409, detail="该卡牌已进入待发布包，请管理员解锁后再修改")

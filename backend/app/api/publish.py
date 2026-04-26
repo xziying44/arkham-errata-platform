@@ -19,6 +19,7 @@ from app.services.url_replacer import (
     export_chinese_card_url_replacements,
     extract_steam_urls_from_json,
 )
+from app.services.errata_drafts import merge_original_picture_for_face
 from app.services.renderer import render_card_preview
 from app.config import settings
 from app.schemas.publish import PublishDirectoryPresetUpdateRequest, PublishRollbackRequest, PublishSessionCreateRequest, PublishUrlImportRequest
@@ -156,11 +157,13 @@ async def generate_session_sheets(
         front = faces.get("a") or next(iter(faces.values()), {})
         if not isinstance(front, dict):
             front = {}
+        front = merge_original_picture_for_face(draft.original_faces or {}, "a", front)
         back = faces.get("b")
         front_path = render_card_preview(front, cards_dir, f"{draft.arkhamdb_id}_a")
         await add_artifact(db, session, PublishArtifactKind.CARD_IMAGE, Path(front_path), {"arkhamdb_id": draft.arkhamdb_id, "face": "a"})
         back_path = None
         if isinstance(back, dict):
+            back = merge_original_picture_for_face(draft.original_faces or {}, "b", back)
             back_path = render_card_preview(back, cards_dir, f"{draft.arkhamdb_id}_b")
             await add_artifact(db, session, PublishArtifactKind.CARD_IMAGE, Path(back_path), {"arkhamdb_id": draft.arkhamdb_id, "face": "b"})
         card_images.append({
@@ -394,12 +397,14 @@ async def step1_generate_sheets(
         front = faces.get("a") or next(iter(faces.values()), {})
         if not isinstance(front, dict):
             front = {}
+        front = merge_original_picture_for_face(draft.original_faces or {}, "a", front)
         back = faces.get("b")
         is_double = isinstance(back, dict)
 
         front_path = render_card_preview(front, temp_dir, f"{draft.arkhamdb_id}")
         back_path = None
         if is_double:
+            back = merge_original_picture_for_face(draft.original_faces or {}, "b", back)
             back_path = render_card_preview(back, temp_dir, f"{draft.arkhamdb_id}_back")
 
         card_images.append(

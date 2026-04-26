@@ -220,3 +220,39 @@ async def test_rollback_to_confirm_sheets_supersedes_url_artifacts(client: Async
     assert response.json()["current_step"] == "confirm_sheets"
     url_artifacts = [artifact for artifact in response.json()["artifacts"] if artifact["kind"] == "url_mapping"]
     assert all(artifact["status"] == "superseded" for artifact in url_artifacts)
+
+
+@pytest.mark.asyncio
+async def test_generate_sheets_preserves_original_picture_base64(client: AsyncClient, db, monkeypatch):
+    token, admin = await _admin_token(client, db)
+    package = ErrataPackage(package_no=f"ERRATA-PICTURE-{uuid.uuid4().hex[:6]}", status=ErrataPackageStatus.WAITING_PUBLISH, created_by=admin.id)
+    db.add(package)
+    await db.flush()
+    draft = ErrataDraft(
+        arkhamdb_id="91006",
+        status=ErrataDraftStatus.WAITING_PUBLISH,
+        original_faces={"a": {"name": "原图", "picture_base64": "data:image/png;base64,AAAA"}},
+        modified_faces={"a": {"name": "改文"}},
+        changed_faces=["a"],
+        package_id=package.id,
+        created_by=admin.id,
+        updated_by=admin.id,
+    )
+    db.add(draft)
+    await db.commit()
+    await db.refresh(package)
+
+    def fake_render(content, output_dir, filename):
+        from PIL import Image
+        assert content["picture_base64"] == "data:image/png;base64,AAAA"
+        path = output_dir / f"{filename}.jpg"
+        Image.new("RGB", (750, 1050), (255, 255, 255)).save(path)
+        return str(path)
+
+    monkeypatch.setattr("app.api.publish.render_card_preview", fake_render)
+    session_response = await client.post("/api/admin/publish/sessions", headers={"Authorization": f"Bearer {token}"}, json={"package_id": package.id})
+    session_id = session_response.json()["id"]
+
+    response = await client.post(f"/api/admin/publish/sessions/{session_id}/generate-sheets", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 200
