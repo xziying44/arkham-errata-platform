@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database import get_db
 from app.models.card import CardIndex
-from app.models.errata_draft import ErrataDraft, ErrataPackage, ErrataPackageStatus
+from app.models.errata_draft import ErrataDraft, ErrataPackage, ErrataPackageStatus, PublishArtifact, PublishSession
 from app.models.user import User
 from app.api.auth import require_admin
 from app.services.sheet_generator import create_decksheet, group_cards_by_sheet
@@ -20,8 +20,61 @@ from app.services.url_replacer import (
 )
 from app.services.renderer import render_card_preview
 from app.config import settings
+from app.schemas.publish import PublishSessionCreateRequest
+from app.services.publish_sessions import create_publish_session, list_session_artifacts, load_publish_session
 
 router = APIRouter(prefix="/api/admin/publish", tags=["发布"])
+
+
+def serialize_publish_artifact(artifact: PublishArtifact) -> dict:
+    return {
+        "id": artifact.id,
+        "session_id": artifact.session_id,
+        "kind": artifact.kind.value,
+        "status": artifact.status.value,
+        "path": artifact.path,
+        "public_url": artifact.public_url,
+        "checksum": artifact.checksum,
+        "metadata": artifact.artifact_metadata,
+        "created_at": artifact.created_at,
+        "updated_at": artifact.updated_at,
+    }
+
+
+async def serialize_publish_session(db: AsyncSession, session: PublishSession) -> dict:
+    artifacts = await list_session_artifacts(db, session.id)
+    return {
+        "id": session.id,
+        "package_id": session.package_id,
+        "status": session.status.value,
+        "current_step": session.current_step,
+        "artifact_root": session.artifact_root,
+        "error_message": session.error_message,
+        "cleanup_at": session.cleanup_at,
+        "created_at": session.created_at,
+        "updated_at": session.updated_at,
+        "artifacts": [serialize_publish_artifact(artifact) for artifact in artifacts],
+    }
+
+
+@router.post("/sessions")
+async def create_session(
+    body: PublishSessionCreateRequest,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    session = await create_publish_session(db, body.package_id, admin)
+    return await serialize_publish_session(db, session)
+
+
+@router.get("/sessions/{session_id}")
+async def get_session(
+    session_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    session = await load_publish_session(db, session_id)
+    return await serialize_publish_session(db, session)
 
 
 async def load_publish_package(

@@ -74,3 +74,53 @@ async def test_publish_directory_preset_model_persists(db):
     saved = (await db.execute(select(PublishDirectoryPreset))).scalar_one()
     assert saved.target_area == PublishDirectoryTargetArea.CAMPAIGNS
     assert saved.local_dir_prefix == "剧本卡/01_基础游戏"
+
+from httpx import AsyncClient
+
+
+async def _admin_token(client: AsyncClient, db) -> tuple[str, User]:
+    suffix = uuid.uuid4().hex[:8]
+    admin = User(username=f"publish-session-admin-{suffix}", password_hash=hash_password("pw"), role=UserRole.ADMIN)
+    db.add(admin)
+    await db.commit()
+    await db.refresh(admin)
+    response = await client.post("/api/auth/login", json={"username": admin.username, "password": "pw"})
+    assert response.status_code == 200
+    return response.json()["token"], admin
+
+
+@pytest.mark.asyncio
+async def test_admin_can_create_publish_session(client: AsyncClient, db):
+    token, admin = await _admin_token(client, db)
+    package = ErrataPackage(package_no=f"ERRATA-SESSION-{uuid.uuid4().hex[:6]}", status=ErrataPackageStatus.WAITING_PUBLISH, created_by=admin.id)
+    db.add(package)
+    await db.commit()
+    await db.refresh(package)
+
+    response = await client.post(
+        "/api/admin/publish/sessions",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"package_id": package.id},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["package_id"] == package.id
+    assert data["status"] == "草稿"
+    assert data["artifact_root"].startswith(f"data/cache/publish/{package.package_no}/")
+
+
+@pytest.mark.asyncio
+async def test_cannot_create_second_active_session_for_same_package(client: AsyncClient, db):
+    token, admin = await _admin_token(client, db)
+    package = ErrataPackage(package_no=f"ERRATA-ONE-SESSION-{uuid.uuid4().hex[:6]}", status=ErrataPackageStatus.WAITING_PUBLISH, created_by=admin.id)
+    db.add(package)
+    await db.commit()
+    await db.refresh(package)
+
+    first = await client.post("/api/admin/publish/sessions", headers={"Authorization": f"Bearer {token}"}, json={"package_id": package.id})
+    second = await client.post("/api/admin/publish/sessions", headers={"Authorization": f"Bearer {token}"}, json={"package_id": package.id})
+
+    assert first.status_code == 200
+    assert second.status_code == 409
+    assert second.json()["detail"] == "当前勘误包已有未完成发布会话"

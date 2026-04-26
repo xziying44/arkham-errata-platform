@@ -1,0 +1,117 @@
+"""发布会话服务：管理发布尝试和产物索引。"""
+
+import hashlib
+import uuid
+from pathlib import Path
+
+from fastapi import HTTPException
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.config import settings
+from app.models.errata_draft import (
+    ErrataPackage,
+    ErrataPackageStatus,
+    PublishArtifact,
+    PublishArtifactKind,
+    PublishArtifactStatus,
+    PublishSession,
+    PublishSessionStatus,
+)
+from app.models.user import User
+
+ACTIVE_SESSION_STATUSES = {
+    PublishSessionStatus.DRAFT,
+    PublishSessionStatus.GENERATING,
+    PublishSessionStatus.SHEETS_READY,
+    PublishSessionStatus.URLS_READY,
+    PublishSessionStatus.PATCH_READY,
+    PublishSessionStatus.FAILED,
+}
+
+
+def artifact_public_url(path: str) -> str | None:
+    cache_root = settings.project_root / settings.cache_dir
+    absolute = settings.project_root / path
+    try:
+        relative = absolute.relative_to(cache_root)
+    except ValueError:
+        return None
+    return f"/static/cache/{relative.as_posix()}"
+
+
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+async def create_publish_session(db: AsyncSession, package_id: int, admin: User) -> PublishSession:
+    package = await db.get(ErrataPackage, package_id)
+    if package is None:
+        raise HTTPException(status_code=404, detail="勘误包不存在")
+    if package.status != ErrataPackageStatus.WAITING_PUBLISH:
+        raise HTTPException(status_code=409, detail="只有待发布勘误包可以创建发布会话")
+
+    existing = await db.execute(
+        select(PublishSession)
+        .where(PublishSession.package_id == package_id)
+        .where(PublishSession.status.in_(ACTIVE_SESSION_STATUSES))
+    )
+    if existing.scalars().first() is not None:
+        raise HTTPException(status_code=409, detail="当前勘误包已有未完成发布会话")
+
+    session_key = uuid.uuid4().hex[:12]
+    artifact_root = settings.cache_dir / "publish" / package.package_no / session_key
+    absolute_root = settings.project_root / artifact_root
+    absolute_root.mkdir(parents=True, exist_ok=True)
+
+    session = PublishSession(
+        package_id=package.id,
+        status=PublishSessionStatus.DRAFT,
+        current_step="select_package",
+        artifact_root=artifact_root.as_posix(),
+        created_by=admin.id,
+        updated_by=admin.id,
+    )
+    db.add(session)
+    await db.commit()
+    await db.refresh(session)
+    return session
+
+
+async def load_publish_session(db: AsyncSession, session_id: int) -> PublishSession:
+    session = await db.get(PublishSession, session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="发布会话不存在")
+    return session
+
+
+async def list_session_artifacts(db: AsyncSession, session_id: int) -> list[PublishArtifact]:
+    result = await db.execute(select(PublishArtifact).where(PublishArtifact.session_id == session_id).order_by(PublishArtifact.id))
+    return list(result.scalars().all())
+
+
+async def add_artifact(
+    db: AsyncSession,
+    session: PublishSession,
+    kind: PublishArtifactKind,
+    path: Path,
+    metadata: dict,
+    status: PublishArtifactStatus = PublishArtifactStatus.ACTIVE,
+) -> PublishArtifact:
+    relative_path = path.relative_to(settings.project_root).as_posix()
+    artifact = PublishArtifact(
+        session_id=session.id,
+        kind=kind,
+        status=status,
+        path=relative_path,
+        public_url=artifact_public_url(relative_path),
+        checksum=file_sha256(path) if path.exists() and path.is_file() else None,
+        artifact_metadata=metadata,
+    )
+    db.add(artifact)
+    await db.flush()
+    return artifact
