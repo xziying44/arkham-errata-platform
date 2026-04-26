@@ -7,7 +7,8 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database import get_db
-from app.models.errata import Errata, ErrataStatus
+from app.models.card import CardIndex
+from app.models.errata_draft import ErrataDraft, ErrataPackage, ErrataPackageStatus
 from app.models.user import User
 from app.api.auth import require_admin
 from app.services.sheet_generator import create_decksheet, group_cards_by_sheet
@@ -23,50 +24,92 @@ from app.config import settings
 router = APIRouter(prefix="/api/admin/publish", tags=["发布"])
 
 
+async def load_publish_package(
+    db: AsyncSession,
+    package_id: int,
+    allowed_statuses: set[ErrataPackageStatus] | None = None,
+) -> tuple[ErrataPackage, list[ErrataDraft]]:
+    package = await db.get(ErrataPackage, package_id)
+    if package is None:
+        raise HTTPException(status_code=404, detail="勘误包不存在")
+    allowed = allowed_statuses or {ErrataPackageStatus.WAITING_PUBLISH}
+    if package.status not in allowed:
+        raise HTTPException(status_code=409, detail="只有待发布的勘误包可以进入发布流程")
+
+    result = await db.execute(
+        select(ErrataDraft)
+        .where(ErrataDraft.package_id == package_id)
+        .where(ErrataDraft.archived_at.is_(None))
+        .order_by(ErrataDraft.arkhamdb_id)
+    )
+    drafts = list(result.scalars().all())
+    if not drafts:
+        raise HTTPException(status_code=404, detail="勘误包没有可发布卡牌")
+    return package, drafts
+
+
+def _sheet_names_for_drafts(drafts: list[ErrataDraft], max_per_sheet: int = 30) -> dict[str, str]:
+    names: dict[str, str] = {}
+    for start_index in range(0, len(drafts), max_per_sheet):
+        chunk = drafts[start_index:start_index + max_per_sheet]
+        sheet_name = f"SheetZH{chunk[0].arkhamdb_id}-{chunk[-1].arkhamdb_id}"
+        for draft in chunk:
+            names[draft.arkhamdb_id] = sheet_name
+    return names
+
+
+def build_approved_cards_from_package(drafts: list[ErrataDraft]) -> list[dict]:
+    sheet_names = _sheet_names_for_drafts(drafts)
+    cards: list[dict] = []
+    for draft in drafts:
+        faces = draft.modified_faces or {}
+        front = faces.get("a") or next(iter(faces.values()), {})
+        cards.append({
+            "arkhamdb_id": draft.arkhamdb_id,
+            "name_zh": front.get("name", draft.arkhamdb_id) if isinstance(front, dict) else draft.arkhamdb_id,
+            "sheet_name": sheet_names[draft.arkhamdb_id],
+            "unique_back": len(faces) > 1,
+        })
+    return cards
+
+
 @router.post("/step1-generate-sheets")
 async def step1_generate_sheets(
     body: dict,
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
-    """步骤1：为指定批次的已批准勘误生成卡牌精灵图"""
-    batch_id = body["batch_id"]
+    """步骤1：为指定勘误包生成卡牌精灵图。"""
+    package_id = body.get("package_id")
+    if package_id is None:
+        raise HTTPException(status_code=400, detail="缺少勘误包 ID")
+    package, drafts = await load_publish_package(db, int(package_id))
 
-    result = await db.execute(
-        select(Errata).where(
-            Errata.batch_id == batch_id,
-            Errata.status == ErrataStatus.APPROVED,
-        )
-    )
-    errata_items = result.scalars().all()
-
-    if not errata_items:
-        raise HTTPException(status_code=404, detail="未找到已通过的勘误")
-
-    temp_dir = settings.project_root / settings.cache_dir / "publish" / batch_id
+    temp_dir = settings.project_root / settings.cache_dir / "publish" / package.package_no
     temp_dir.mkdir(parents=True, exist_ok=True)
 
     card_images = []
-    for e in errata_items:
-        modified = json.loads(e.modified_content)
-        is_double = modified.get("double_sided", False) or "back" in modified
+    for draft in drafts:
+        faces = draft.modified_faces or {}
+        front = faces.get("a") or next(iter(faces.values()), {})
+        if not isinstance(front, dict):
+            front = {}
+        back = faces.get("b")
+        is_double = isinstance(back, dict)
 
-        front_path = render_card_preview(modified, temp_dir, f"{e.arkhamdb_id}")
+        front_path = render_card_preview(front, temp_dir, f"{draft.arkhamdb_id}")
         back_path = None
-
-        if is_double and "back" in modified:
-            back_path = render_card_preview(
-                modified["back"], temp_dir, f"{e.arkhamdb_id}_back"
-            )
+        if is_double:
+            back_path = render_card_preview(back, temp_dir, f"{draft.arkhamdb_id}_back")
 
         card_images.append(
             {
-                "arkhamdb_id": e.arkhamdb_id,
+                "arkhamdb_id": draft.arkhamdb_id,
                 "front_path": front_path,
                 "back_path": back_path,
                 "is_double_sided": is_double,
-                "name_zh": modified.get("name", ""),
-                "unique_back": modified.get("unique_back", False),
+                "name_zh": front.get("name", ""),
+                "unique_back": is_double,
             }
         )
 
@@ -80,9 +123,7 @@ async def step1_generate_sheets(
         back_sheet_path = None
         if any(sheet["back_images"]):
             back_sheet_path = str(temp_dir / f"{sheet['sheet_name']}-back.jpg")
-            create_decksheet(
-                sheet["back_images"], output_path=back_sheet_path
-            )
+            create_decksheet(sheet["back_images"], output_path=back_sheet_path)
 
         generated.append(
             {
@@ -94,7 +135,10 @@ async def step1_generate_sheets(
         )
 
     return {
+        "package_id": package.id,
+        "package_no": package.package_no,
         "generated_sheets": generated,
+        "approved_cards": build_approved_cards_from_package(drafts),
         "total_cards": len(card_images),
         "total_sheets": len(generated),
     }
@@ -129,17 +173,26 @@ async def step2_upload(
 @router.post("/step3-export-tts")
 async def step3_export_tts(
     body: dict,
+    db: AsyncSession = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
-    """步骤3：导出 TTS 存档包 JSON 文件"""
+    """步骤3：按勘误包导出 TTS 存档包 JSON 文件。"""
+    package_id = body.get("package_id")
+    if package_id is None:
+        raise HTTPException(status_code=400, detail="缺少勘误包 ID")
+    package, drafts = await load_publish_package(
+        db,
+        int(package_id),
+        {ErrataPackageStatus.WAITING_PUBLISH, ErrataPackageStatus.PUBLISHING},
+    )
     bag_json = generate_tts_bag_json(
-        body["approved_cards"],
+        build_approved_cards_from_package(drafts),
         body["sheet_urls"],
         body.get("sheet_grids", {}),
     )
 
     export_path = (
-        settings.project_root / settings.cache_dir / "exports" / "tts_bag.json"
+        settings.project_root / settings.cache_dir / "exports" / f"tts_bag_{package.package_no}.json"
     )
     export_path.parent.mkdir(parents=True, exist_ok=True)
     export_path.write_text(
