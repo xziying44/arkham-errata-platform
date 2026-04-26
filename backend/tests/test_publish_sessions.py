@@ -71,7 +71,7 @@ async def test_publish_directory_preset_model_persists(db):
     db.add(preset)
     await db.commit()
 
-    saved = (await db.execute(select(PublishDirectoryPreset))).scalar_one()
+    saved = (await db.execute(select(PublishDirectoryPreset).where(PublishDirectoryPreset.local_dir_prefix == "剧本卡/01_基础游戏"))).scalar_one()
     assert saved.target_area == PublishDirectoryTargetArea.CAMPAIGNS
     assert saved.local_dir_prefix == "剧本卡/01_基础游戏"
 
