@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import require_admin
@@ -13,6 +13,8 @@ from app.models.errata_draft import (
     ErrataDraftStatus,
     ErrataPackage,
     ErrataPackageStatus,
+    PublishArtifact,
+    PublishSession,
 )
 from app.models.user import User
 from app.services.errata_drafts import append_audit_log, get_participant_usernames
@@ -20,7 +22,8 @@ from app.services.errata_drafts import append_audit_log, get_participant_usernam
 router = APIRouter(prefix="/api/admin/packages", tags=["勘误包"])
 
 
-def serialize_package(package: ErrataPackage) -> dict:
+def serialize_package(package: ErrataPackage, summary: dict | None = None) -> dict:
+    summary = summary or {}
     return {
         "id": package.id,
         "package_no": package.package_no,
@@ -29,6 +32,11 @@ def serialize_package(package: ErrataPackage) -> dict:
         "created_at": package.created_at,
         "updated_at": package.updated_at,
         "published_at": package.published_at,
+        "card_count": summary.get("card_count", 0),
+        "created_by_username": summary.get("created_by_username"),
+        "published_by_username": summary.get("published_by_username"),
+        "latest_session": summary.get("latest_session"),
+        "artifact_summary": summary.get("artifact_summary", {}),
     }
 
 
@@ -64,7 +72,49 @@ async def list_packages(
     admin: User = Depends(require_admin),
 ):
     result = await db.execute(select(ErrataPackage).order_by(ErrataPackage.created_at.desc(), ErrataPackage.id.desc()))
-    return {"items": [serialize_package(package) for package in result.scalars().all()]}
+    packages = list(result.scalars().all())
+    items = []
+    for package in packages:
+        card_count = (
+            await db.execute(
+                select(func.count(ErrataDraft.id))
+                .where(ErrataDraft.package_id == package.id)
+                .where(ErrataDraft.archived_at.is_(None))
+            )
+        ).scalar_one()
+        creator = await db.get(User, package.created_by)
+        publisher = await db.get(User, package.published_by) if package.published_by else None
+        latest_session = (
+            await db.execute(
+                select(PublishSession)
+                .where(PublishSession.package_id == package.id)
+                .order_by(PublishSession.updated_at.desc(), PublishSession.id.desc())
+            )
+        ).scalars().first()
+        artifact_summary: dict[str, bool] = {}
+        if latest_session:
+            artifact_rows = (
+                await db.execute(select(PublishArtifact).where(PublishArtifact.session_id == latest_session.id))
+            ).scalars().all()
+            artifact_summary = {artifact.kind.value: True for artifact in artifact_rows}
+        items.append(
+            serialize_package(
+                package,
+                {
+                    "card_count": card_count,
+                    "created_by_username": creator.username if creator else None,
+                    "published_by_username": publisher.username if publisher else None,
+                    "latest_session": {
+                        "id": latest_session.id,
+                        "status": latest_session.status.value,
+                        "current_step": latest_session.current_step,
+                        "updated_at": latest_session.updated_at,
+                    } if latest_session else None,
+                    "artifact_summary": artifact_summary,
+                },
+            )
+        )
+    return {"items": items}
 
 
 @router.get("/{package_id}")

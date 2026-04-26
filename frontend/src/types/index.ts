@@ -133,6 +133,13 @@ export interface ErrataAuditLog {
   created_at: string;
 }
 
+export interface PublishSessionSummary {
+  id: number;
+  status: string;
+  current_step: string;
+  updated_at: string;
+}
+
 export interface ErrataPackage {
   id: number;
   package_no: string;
@@ -141,6 +148,11 @@ export interface ErrataPackage {
   created_at: string;
   updated_at: string;
   published_at: string | null;
+  card_count: number;
+  created_by_username: string | null;
+  published_by_username: string | null;
+  latest_session: PublishSessionSummary | null;
+  artifact_summary: Record<string, boolean>;
 }
 
 export interface CardTreeCard extends CardIndex {

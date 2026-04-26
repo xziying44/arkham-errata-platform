@@ -110,3 +110,25 @@ async def test_admin_unlocks_whole_package(client: AsyncClient, db):
     refreshed = (await db.execute(select(ErrataDraft).where(ErrataDraft.arkhamdb_id == f"93{suffix[:3]}4"))).scalar_one()
     assert refreshed.status == ErrataDraftStatus.ERRATA
     assert refreshed.package_id is None
+
+@pytest.mark.asyncio
+async def test_package_list_includes_publish_summary(client: AsyncClient, db):
+    suffix = uuid.uuid4().hex[:8]
+    admin = User(username=f"admin-package-summary-{suffix}", password_hash=hash_password("pw"), role=UserRole.ADMIN)
+    db.add(admin)
+    await db.flush()
+    package = ErrataPackage(package_no=f"ERRATA-SUMMARY-{suffix}", status=ErrataPackageStatus.WAITING_PUBLISH, created_by=admin.id)
+    db.add(package)
+    await db.flush()
+    draft = ErrataDraft(arkhamdb_id=f"94{suffix[:3]}1", status=ErrataDraftStatus.WAITING_PUBLISH, original_faces={}, modified_faces={"a": {}}, changed_faces=["a"], package_id=package.id, created_by=admin.id, updated_by=admin.id)
+    db.add(draft)
+    await db.commit()
+
+    token = await login_token(client, admin.username, "pw")
+    response = await client.get("/api/admin/packages", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 200
+    item = next(item for item in response.json()["items"] if item["package_no"] == package.package_no)
+    assert item["card_count"] == 1
+    assert item["created_by_username"] == admin.username
+    assert "artifact_summary" in item
