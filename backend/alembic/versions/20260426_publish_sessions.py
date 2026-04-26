@@ -9,6 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 revision: str = "20260426_publish_sessions"
@@ -17,10 +18,10 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
-publishsessionstatus = sa.Enum("DRAFT", "GENERATING", "SHEETS_READY", "URLS_READY", "PATCH_READY", "COMPLETED", "SUPERSEDED", "FAILED", name="publishsessionstatus")
-publishartifactkind = sa.Enum("CARD_IMAGE", "SHEET_FRONT", "SHEET_BACK", "TTS_BAG", "URL_MAPPING", "PATCH_ZIP", "MANIFEST", "REPORT", name="publishartifactkind")
-publishartifactstatus = sa.Enum("ACTIVE", "CONFIRMED", "SUPERSEDED", "DELETED", "FAILED", name="publishartifactstatus")
-publishdirectorytargetarea = sa.Enum("CAMPAIGNS", "PLAYER_CARDS", name="publishdirectorytargetarea")
+publishsessionstatus = postgresql.ENUM("DRAFT", "GENERATING", "SHEETS_READY", "URLS_READY", "PATCH_READY", "COMPLETED", "SUPERSEDED", "FAILED", name="publishsessionstatus", create_type=False)
+publishartifactkind = postgresql.ENUM("CARD_IMAGE", "SHEET_FRONT", "SHEET_BACK", "TTS_BAG", "URL_MAPPING", "PATCH_ZIP", "MANIFEST", "REPORT", name="publishartifactkind", create_type=False)
+publishartifactstatus = postgresql.ENUM("ACTIVE", "CONFIRMED", "SUPERSEDED", "DELETED", "FAILED", name="publishartifactstatus", create_type=False)
+publishdirectorytargetarea = postgresql.ENUM("CAMPAIGNS", "PLAYER_CARDS", name="publishdirectorytargetarea", create_type=False)
 
 
 def upgrade() -> None:
