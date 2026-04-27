@@ -12,6 +12,8 @@ from app.models.card import LocalCardFile
 from app.models.errata_draft import ErrataAuditAction, ErrataAuditLog, ErrataDraft, ErrataDraftStatus
 from app.models.user import User
 from app.schemas.errata_draft import SaveErrataDraftRequest
+from app.services.local_card_index import restore_local_card_index_paths, update_local_card_index_faces
+from app.services.renderer import render_card_preview
 
 
 def _content_hash(content: dict) -> str:
@@ -21,6 +23,15 @@ def _content_hash(content: dict) -> str:
 
 def _local_card_root() -> Path:
     return (settings.project_root / settings.local_card_db).resolve()
+
+
+def _preview_url_from_path(result_path: str) -> str:
+    """将勘误预览图片路径转换为前端可访问 URL。"""
+    try:
+        relative = Path(result_path).relative_to(settings.project_root / settings.cache_dir)
+        return f"/static/cache/{relative.as_posix()}"
+    except ValueError:
+        return result_path
 
 
 def _read_local_card_content(relative_path: str) -> dict:
@@ -55,6 +66,14 @@ async def load_original_faces(db: AsyncSession, arkhamdb_id: str) -> dict[str, d
     return {card_file.face: _read_local_card_content(card_file.relative_path) for card_file in files}
 
 
+async def load_local_face_paths(db: AsyncSession, arkhamdb_id: str) -> dict[str, str]:
+    result = await db.execute(
+        select(LocalCardFile)
+        .where(LocalCardFile.arkhamdb_id == arkhamdb_id)
+        .order_by(LocalCardFile.face)
+    )
+    return {card_file.face: card_file.relative_path for card_file in result.scalars().all()}
+
 
 def merge_original_picture_for_face(original_faces: dict[str, dict], face: str, content: dict) -> dict:
     """渲染勘误副本时从原始面补回 picture_base64，避免背景图丢失。"""
@@ -64,6 +83,31 @@ def merge_original_picture_for_face(original_faces: dict[str, dict], face: str, 
     if isinstance(original, dict) and original.get("picture_base64"):
         return {**content, "picture_base64": original["picture_base64"]}
     return content
+
+
+def render_modified_faces_or_400(
+    arkhamdb_id: str,
+    original_faces: dict[str, dict],
+    modified_faces: dict[str, dict],
+) -> dict[str, str | None]:
+    """保存勘误前渲染所有面，失败时拒绝保存，避免坏 JSON 进入勘误池。"""
+    preview_dir = settings.project_root / settings.cache_dir / "previews"
+    rendered_previews: dict[str, str | None] = {}
+    for face, content in sorted(modified_faces.items()):
+        if not isinstance(content, dict):
+            raise HTTPException(status_code=400, detail=f"{face} 面 JSON 必须是对象")
+        render_content = merge_original_picture_for_face(original_faces, face, content)
+        result_path = render_card_preview(
+            render_content,
+            preview_dir,
+            f"errata_{arkhamdb_id}_{face}",
+            dpi=settings.preview_render_dpi,
+            quality=settings.preview_jpeg_quality,
+        )
+        if result_path is None:
+            raise HTTPException(status_code=400, detail=f"{face} 面渲染失败，请先修正 JSON 或卡图资源后再保存")
+        rendered_previews[face] = _preview_url_from_path(result_path)
+    return rendered_previews
 
 def ensure_draft_editable(draft: ErrataDraft) -> None:
     if draft.status == ErrataDraftStatus.WAITING_PUBLISH:
@@ -105,16 +149,19 @@ async def save_draft(
     draft = await get_active_draft(db, arkhamdb_id)
     created = False
     from_status: str | None = None
+    if draft is not None:
+        ensure_draft_editable(draft)
+    original_faces = draft.original_faces if draft is not None else await load_original_faces(db, arkhamdb_id)
+    rendered_previews = render_modified_faces_or_400(arkhamdb_id, original_faces, body.modified_faces)
 
     if draft is None:
-        original_faces = await load_original_faces(db, arkhamdb_id)
         draft = ErrataDraft(
             arkhamdb_id=arkhamdb_id,
             status=ErrataDraftStatus.ERRATA,
             original_faces=original_faces,
             modified_faces=body.modified_faces,
             changed_faces=body.changed_faces,
-            rendered_previews={},
+            rendered_previews=rendered_previews,
             created_by=user.id,
             updated_by=user.id,
         )
@@ -132,10 +179,10 @@ async def save_draft(
             "创建勘误副本",
         )
     else:
-        ensure_draft_editable(draft)
         from_status = draft.status.value
         draft.modified_faces = body.modified_faces
         draft.changed_faces = body.changed_faces
+        draft.rendered_previews = rendered_previews
         draft.updated_by = user.id
 
     await append_audit_log(
@@ -150,6 +197,8 @@ async def save_draft(
     )
     await db.commit()
     await db.refresh(draft)
+    face_paths = await load_local_face_paths(db, arkhamdb_id)
+    update_local_card_index_faces(_local_card_root(), face_paths, draft.modified_faces or {})
     return draft
 
 
@@ -177,6 +226,8 @@ async def cancel_draft(db: AsyncSession, arkhamdb_id: str, user: User, note: str
     )
     await db.commit()
     await db.refresh(draft)
+    face_paths = await load_local_face_paths(db, arkhamdb_id)
+    restore_local_card_index_paths(_local_card_root(), list(face_paths.values()))
     return draft
 
 

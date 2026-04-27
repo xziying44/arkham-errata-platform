@@ -11,8 +11,10 @@ export default function UserManagementPage() {
   const [loading, setLoading] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [resetUser, setResetUser] = useState<User | null>(null);
+  const [editingNoteUser, setEditingNoteUser] = useState<User | null>(null);
   const [form] = Form.useForm();
   const [resetForm] = Form.useForm();
+  const [noteForm] = Form.useForm();
 
   const load = async () => {
     setLoading(true);
@@ -27,6 +29,11 @@ export default function UserManagementPage() {
 
   const columns: ColumnsType<User> = [
     { title: '账号', dataIndex: 'username' },
+    {
+      title: '备注',
+      dataIndex: 'note',
+      render: (note: string) => note || <span style={{ color: '#999' }}>未备注</span>,
+    },
     {
       title: '角色',
       dataIndex: 'role',
@@ -62,7 +69,12 @@ export default function UserManagementPage() {
     },
     {
       title: '操作',
-      render: (_, record) => <Button onClick={() => setResetUser(record)}>重置密码</Button>,
+      render: (_, record) => (
+        <Space>
+          <Button onClick={() => { setEditingNoteUser(record); noteForm.setFieldsValue({ note: record.note }); }}>编辑备注</Button>
+          <Button onClick={() => setResetUser(record)}>重置密码</Button>
+        </Space>
+      ),
     },
   ];
 
@@ -87,6 +99,30 @@ export default function UserManagementPage() {
           <Form.Item name="password" label="密码" rules={[{ required: true, message: '请输入密码' }]}><Input.Password /></Form.Item>
           <Form.Item name="role" label="角色" rules={[{ required: true }]}>
             <Select options={roleOptions.map((value) => ({ value, label: value }))} />
+          </Form.Item>
+          <Form.Item name="note" label="备注">
+            <Input.TextArea rows={3} placeholder="例如：张三使用 / 二校账号 / 联系方式备注" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title={`编辑备注：${editingNoteUser?.username || ''}`}
+        open={Boolean(editingNoteUser)}
+        onCancel={() => setEditingNoteUser(null)}
+        onOk={async () => {
+          const values = await noteForm.validateFields();
+          if (!editingNoteUser) return;
+          await updateUser(editingNoteUser.id, { note: values.note || '' });
+          message.success('备注已更新');
+          setEditingNoteUser(null);
+          noteForm.resetFields();
+          load();
+        }}
+      >
+        <Form form={noteForm} layout="vertical">
+          <Form.Item name="note" label="备注">
+            <Input.TextArea rows={4} placeholder="记录这个账号是谁在用" />
           </Form.Item>
         </Form>
       </Modal>

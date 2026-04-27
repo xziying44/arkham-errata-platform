@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Key, ReactNode } from 'react';
 import { FolderOpenOutlined, FolderOutlined } from '@ant-design/icons';
-import { Button, Card, Empty, Input, Layout, message, Modal, Space, Spin, Tag, Tree, Typography } from 'antd';
+import { Button, Card, Empty, Input, Layout, message, Modal, Segmented, Space, Spin, Tag, Tree, Typography } from 'antd';
 import type { DataNode } from 'antd/es/tree';
-import { fetchCardDetail, fetchCardTree, previewAllFaces } from '../../api/cards';
+import { fetchCardDetail, fetchCardTree, previewOneFace } from '../../api/cards';
 import { fetchCardFileContent, previewCard } from '../../api/errata';
 import CardComparison from '../CardComparison';
 import JsonEditor from '../JsonEditor';
 import CardTextFieldsEditor from './CardTextFieldsEditor';
+import SymbolReferenceHelp from './SymbolReferenceHelp';
 import type { CardDetail, CardTreeCard, CardTreeNode, ErrataAuditLog, ErrataDraft, PreviewFace, WorkbenchMode } from '../../types';
 import { cancelErrataDraft, fetchErrataDraft, fetchErrataDraftLogs, saveErrataDraft } from '../../api/errataDrafts';
 import { createReviewPackage } from '../../api/packages';
@@ -109,12 +110,34 @@ function renderGroupTitle(
   );
 }
 
-function renderCardTitle(card: CardTreeCard) {
+type CardTitleFaceMode = 'front' | 'back';
+
+function titleForCardFace(card: CardTreeCard, mode: CardTitleFaceMode) {
+  const faceTitles = card.face_titles || {};
+  if (mode === 'back') {
+    return faceTitles.b || faceTitles['a-c'] || faceTitles.a || card.name_zh || card.name_en || '未命名卡牌';
+  }
+  return faceTitles.a || faceTitles['a-c'] || faceTitles.b || card.name_zh || card.name_en || '未命名卡牌';
+}
+
+function subtitleForCardFace(card: CardTreeCard, mode: CardTitleFaceMode) {
+  const faceSubtitles = card.face_subtitles || {};
+  if (mode === 'back') {
+    return faceSubtitles.b || faceSubtitles['a-c'] || faceSubtitles.a || '';
+  }
+  return faceSubtitles.a || faceSubtitles['a-c'] || faceSubtitles.b || '';
+}
+
+function renderCardTitle(card: CardTreeCard, titleFaceMode: CardTitleFaceMode) {
+  const subtitle = subtitleForCardFace(card, titleFaceMode);
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', minWidth: 0 }}>
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, width: '100%', minWidth: 0 }}>
       <Tag color="geekblue" style={{ marginInlineEnd: 0, flex: '0 0 auto' }}>{card.arkhamdb_id}</Tag>
-      <Text strong ellipsis style={{ flex: '1 1 auto', minWidth: 0 }}>{card.name_zh || card.name_en || '未命名卡牌'}</Text>
-      <Space size={4} style={{ flex: '0 0 auto' }}>
+      <div style={{ flex: '1 1 auto', minWidth: 0, lineHeight: 1.2 }}>
+        <Text strong ellipsis style={{ display: 'block' }}>{titleForCardFace(card, titleFaceMode)}</Text>
+        {subtitle && <Text type="secondary" ellipsis style={{ display: 'block', fontSize: 12, marginTop: 2 }}>{subtitle}</Text>}
+      </div>
+      <Space size={4} style={{ flex: '0 0 auto', paddingTop: 1 }}>
         {errataTag(card)}
         {faceSummary(card)}
         {card.latest_batch_id && <Tag color="gold" style={{ marginInlineEnd: 0 }}>包 {card.latest_batch_id}</Tag>}
@@ -127,12 +150,13 @@ function toTreeData(
   nodes: CardTreeNode[],
   expandedKeys: Key[],
   onToggle: (key: string) => void,
+  titleFaceMode: CardTitleFaceMode,
 ): DataNode[] {
   const expanded = new Set(expandedKeys.map(String));
   return nodes.map((node) => ({
     key: node.key,
-    title: node.card ? renderCardTitle(node.card) : renderGroupTitle(node, expanded.has(node.key), onToggle),
-    children: node.children ? toTreeData(node.children, expandedKeys, onToggle) : undefined,
+    title: node.card ? renderCardTitle(node.card, titleFaceMode) : renderGroupTitle(node, expanded.has(node.key), onToggle),
+    children: node.children ? toTreeData(node.children, expandedKeys, onToggle, titleFaceMode) : undefined,
     isLeaf: Boolean(node.card),
   }));
 }
@@ -212,6 +236,8 @@ export default function CardWorkbench({ mode, packageId }: CardWorkbenchProps) {
   const [auditLogs, setAuditLogs] = useState<ErrataAuditLog[]>([]);
   const [packaging, setPackaging] = useState(false);
   const [canceling, setCanceling] = useState(false);
+  const [titleFaceMode, setTitleFaceMode] = useState<CardTitleFaceMode>('front');
+  const [symbolHelpOpen, setSymbolHelpOpen] = useState(false);
 
   const loadTree = useCallback(async (search?: string) => {
     setTreeLoading(true);
@@ -264,10 +290,12 @@ export default function CardWorkbench({ mode, packageId }: CardWorkbenchProps) {
           }
         }
         let currentJsonByFace = jsonByFace;
+        let activeDraft: ErrataDraft | null = null;
         try {
           const currentDraft = await fetchErrataDraft(selectedId);
           if (!cancelled && currentDraft) {
             setDraft(currentDraft);
+            activeDraft = currentDraft;
             currentJsonByFace = Object.fromEntries(
               Object.entries(currentDraft.modified_faces).map(([face, content]) => [face, JSON.stringify(content, null, 2)]),
             );
@@ -288,14 +316,41 @@ export default function CardWorkbench({ mode, packageId }: CardWorkbenchProps) {
           message.warning('部分 .card 文件读取失败，可稍后重试');
         }
 
-        try {
-          const previews = await previewAllFaces(selectedId);
-          if (!cancelled) setPreviewFaces(previews.items);
-        } catch (e: any) {
-          if (!cancelled) {
-            message.warning(e?.response?.data?.detail || '本地预览仍在生成或暂时失败，不影响编辑');
-          }
-        }
+        setPreviewFaces(cardDetail.local_files.map((file) => ({
+          face: file.face,
+          relative_path: file.relative_path,
+          preview_url: activeDraft?.rendered_previews?.[file.face] || null,
+          error: activeDraft ? '正在生成勘误副本预览…' : '正在生成本地预览…',
+          cache_bust: activeDraft?.rendered_previews?.[file.face] ? Date.parse(activeDraft.updated_at) : undefined,
+        })));
+        await Promise.allSettled(
+          cardDetail.local_files.map(async (file) => {
+            try {
+              const preview = activeDraft
+                ? {
+                    face: file.face,
+                    relative_path: file.relative_path,
+                    preview_url: activeDraft.rendered_previews?.[file.face] || (await previewCard(`${selectedId}_${file.face}`, activeDraft.modified_faces[file.face] || {})).preview_url || null,
+                    error: null,
+                    cache_bust: Date.now(),
+                  }
+                : await previewOneFace(selectedId, file.face);
+              if (!cancelled) {
+                setPreviewFaces((items) => {
+                  const others = items.filter((item) => item.face !== preview.face);
+                  return [...others, preview].sort((left, right) => left.face.localeCompare(right.face));
+                });
+              }
+            } catch (e: any) {
+              if (!cancelled) {
+                setPreviewFaces((items) => items.map((item) => item.face === file.face ? {
+                  ...item,
+                  error: e?.response?.data?.detail || '本地预览生成失败，可稍后重试',
+                } : item));
+              }
+            }
+          }),
+        );
       } catch (e: any) {
         if (!cancelled) {
           message.error(e?.response?.data?.detail || '加载卡牌基础信息失败');
@@ -311,7 +366,10 @@ export default function CardWorkbench({ mode, packageId }: CardWorkbenchProps) {
     setExpandedKeys((keys) => keys.map(String).includes(key) ? keys.filter((item) => String(item) !== key) : [...keys, key]);
   }, []);
 
-  const treeData = useMemo(() => toTreeData(tree, expandedKeys, toggleExpandedKey), [tree, expandedKeys, toggleExpandedKey]);
+  const treeData = useMemo(
+    () => toTreeData(tree, expandedKeys, toggleExpandedKey, titleFaceMode),
+    [tree, expandedKeys, toggleExpandedKey, titleFaceMode],
+  );
   const treeStats = useMemo(() => summarizeTree(tree), [tree]);
   const currentJson = modifiedJsonByFace[selectedFace] || '';
   const previewMap = Object.fromEntries(previewFaces.map((item) => [item.face, item]));
@@ -403,6 +461,16 @@ export default function CardWorkbench({ mode, packageId }: CardWorkbenchProps) {
         diff_summary: mode === 'review' ? '审核修改' : '保存勘误',
       });
       setDraft(saved);
+      setPreviewFaces((items) => {
+        const existing = Object.fromEntries(items.map((item) => [item.face, item]));
+        return Object.entries(saved.rendered_previews).map(([face, previewUrl]) => ({
+          face,
+          relative_path: existing[face]?.relative_path || '',
+          preview_url: previewUrl,
+          error: previewUrl ? null : '勘误副本预览缺失',
+          cache_bust: Date.now(),
+        })).sort((left, right) => left.face.localeCompare(right.face));
+      });
       try {
         setAuditLogs(await fetchErrataDraftLogs(selectedId));
       } catch {
@@ -488,6 +556,15 @@ export default function CardWorkbench({ mode, packageId }: CardWorkbenchProps) {
             <Button onClick={() => setExpandedKeys([])}>全部收起</Button>
             <Button onClick={() => loadTree(keyword)} loading={treeLoading}>刷新</Button>
           </Space.Compact>
+          <Segmented
+            block
+            value={titleFaceMode}
+            onChange={(value) => setTitleFaceMode(value as CardTitleFaceMode)}
+            options={[
+              { label: '显示正面标题', value: 'front' },
+              { label: '显示背面标题', value: 'back' },
+            ]}
+          />
           {mode === 'review' && (
             <Button type="primary" block loading={packaging} onClick={handleCreatePackage}>
               将当前列表生成勘误包
@@ -538,6 +615,7 @@ export default function CardWorkbench({ mode, packageId }: CardWorkbenchProps) {
                       {faceLabel(face)}
                     </Button>
                   ))}
+                  <Button onClick={() => setSymbolHelpOpen(true)}>符号参考</Button>
                   <Button type="primary" onClick={handleRenderSelected} loading={rendering}>校验渲染</Button>
                   {mode === 'review' && draft?.status === '勘误' && (
                     <Button danger onClick={handleCancelErrata} loading={canceling}>取消勘误状态</Button>
@@ -571,6 +649,7 @@ export default function CardWorkbench({ mode, packageId }: CardWorkbenchProps) {
           </Space>
         ) : null}
       </Content>
+      <SymbolReferenceHelp open={symbolHelpOpen} onClose={() => setSymbolHelpOpen(false)} />
     </Layout>
   );
 }

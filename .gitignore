@@ -36,6 +36,8 @@ frontend/dist/
 # Cache
 data/cache/*
 !data/cache/.gitkeep
+backend/data/cache/**
+!backend/data/cache/.gitkeep
 # Local generated data
 .superpowers/
 **/.DS_Store

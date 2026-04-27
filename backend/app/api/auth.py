@@ -83,7 +83,7 @@ async def create_user(
     existing = await db.execute(select(User).where(User.username == req.username))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="用户名已存在")
-    user = User(username=req.username, password_hash=hash_password(req.password), role=parse_user_role(req.role))
+    user = User(username=req.username, password_hash=hash_password(req.password), role=parse_user_role(req.role), note=req.note.strip())
     db.add(user)
     await db.commit()
     await db.refresh(user)
@@ -113,6 +113,8 @@ async def update_user(
         user.role = parse_user_role(req.role)
     if req.is_active is not None:
         user.is_active = req.is_active
+    if req.note is not None:
+        user.note = req.note.strip()
     await db.commit()
     await db.refresh(user)
     return user

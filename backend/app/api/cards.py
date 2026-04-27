@@ -1,6 +1,6 @@
 """卡牌 API：初始化编排、浏览、详情、筛选"""
-
 import json
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -18,7 +18,8 @@ from app.schemas.card import CardIndexResponse, CardDetailResponse, LocalCardFil
 from app.services.scanner import scan_card_database, detect_double_sided, load_card_content
 from app.services.tts_parser import scan_tts_directory, find_shared_backs
 from app.services.mapping_index import get_mapping_detail, resolve_card_image_mappings
-from app.services.image_cache import download_and_cut_sheet
+from app.services.image_cache import download_and_cut_sheet, ensure_preview_cached_image
+from app.services.local_card_index import build_local_card_index, ensure_local_card_index, get_local_card_face_index, search_local_card_index
 from app.services.tts_cache_warmer import get_cache_warm_status, start_tts_cache_warmer
 
 router = APIRouter(prefix="/api/cards", tags=["卡牌"])
@@ -47,6 +48,60 @@ def _preview_url_from_path(result_path: str) -> str:
         return f"/static/cache/{Path(result_path).relative_to(settings.project_root / settings.cache_dir)}"
     except ValueError:
         return result_path
+
+
+def _draft_content_matches_keyword(draft: ErrataDraft, keyword: str) -> bool:
+    """判断活跃勘误副本内容是否命中搜索词。"""
+    if not keyword:
+        return False
+    text = f"{draft.arkhamdb_id} {json.dumps(draft.modified_faces or {}, ensure_ascii=False, sort_keys=True)}"
+    return keyword in text.lower()
+
+
+def _overlay_draft_face_titles(item: dict, draft: ErrataDraft) -> None:
+    """用活跃勘误副本覆盖树节点的正背面标题。"""
+    for face, content in (draft.modified_faces or {}).items():
+        if not isinstance(content, dict):
+            continue
+        title = content.get("name")
+        subtitle = content.get("subtitle")
+        if isinstance(title, str) and title:
+            item["face_titles"][face] = title
+        if isinstance(subtitle, str) and subtitle:
+            item["face_subtitles"][face] = subtitle
+
+
+def _render_local_face_preview(arkhamdb_id: str, file_record: LocalCardFile) -> dict:
+    """渲染单个本地 .card 面，便于前端渐进式展示"""
+    from app.services.renderer import render_card_preview
+
+    preview_dir = settings.project_root / settings.cache_dir / "previews"
+    preview_dir.mkdir(parents=True, exist_ok=True)
+    content = load_card_content(
+        settings.project_root / settings.local_card_db,
+        file_record.relative_path,
+        include_picture=True,
+    )
+    if not content:
+        return {
+            "face": file_record.face,
+            "relative_path": file_record.relative_path,
+            "preview_url": None,
+            "error": "无法读取文件内容",
+        }
+    result_path = render_card_preview(
+        content,
+        preview_dir,
+        f"{arkhamdb_id}_{file_record.face}",
+        dpi=settings.preview_render_dpi,
+        quality=settings.preview_jpeg_quality,
+    )
+    return {
+        "face": file_record.face,
+        "relative_path": file_record.relative_path,
+        "preview_url": _preview_url_from_path(result_path) if result_path else None,
+        "error": None if result_path else "渲染失败",
+    }
 
 
 async def _merge_original_picture(
@@ -94,13 +149,18 @@ async def run_full_initialization(db: AsyncSession):
 
     # Step 1: 扫描本地 .card 文件
     local_cards = scan_card_database(project_root / settings.local_card_db)
+    build_local_card_index(project_root / settings.local_card_db)
     double_sided_ids = detect_double_sided(local_cards)
+    front_name_by_id: dict[str, str] = {}
+    for sc in local_cards:
+        if sc.face == "a" or sc.arkhamdb_id not in front_name_by_id:
+            front_name_by_id[sc.arkhamdb_id] = sc.name_zh
 
     for sc in local_cards:
         existing = await db.get(CardIndex, sc.arkhamdb_id)
         if not existing:
             existing = CardIndex(arkhamdb_id=sc.arkhamdb_id)
-        existing.name_zh = sc.name_zh
+        existing.name_zh = front_name_by_id.get(sc.arkhamdb_id, sc.name_zh)
         existing.category = sc.category
         existing.cycle = sc.cycle
         existing.is_double_sided = sc.arkhamdb_id in double_sided_ids
@@ -312,6 +372,8 @@ async def get_local_card_tree(
     current_user: User | None = Depends(optional_current_user),
 ):
     """按卡牌数据库目录组织卡牌树，仅包含存在本地 .card 文件的卡牌。"""
+    local_card_root = settings.project_root / settings.local_card_db
+    ensure_local_card_index(local_card_root)
     base_query = (
         select(CardIndex, LocalCardFile)
         .join(LocalCardFile, LocalCardFile.arkhamdb_id == CardIndex.arkhamdb_id)
@@ -332,16 +394,39 @@ async def get_local_card_tree(
         rows = list((await db.execute(db_query.order_by(*order_columns))).all())
         seen = {(card.arkhamdb_id, file_record.relative_path) for card, file_record in rows}
 
+        matched_paths = search_local_card_index(local_card_root, normalized_keyword)
         encounter_rows = (await db.execute(base_query.order_by(*order_columns))).all()
         for card, file_record in encounter_rows:
             row_key = (card.arkhamdb_id, file_record.relative_path)
             if row_key in seen:
                 continue
-            content = load_card_content(settings.project_root / settings.local_card_db, file_record.relative_path) or {}
-            content_text = json.dumps(content, ensure_ascii=False).lower()
-            if normalized_keyword in content_text:
+            if file_record.relative_path in matched_paths:
                 rows.append((card, file_record))
                 seen.add(row_key)
+
+        active_draft_result = await db.execute(
+            select(ErrataDraft)
+            .where(ErrataDraft.archived_at.is_(None))
+            .order_by(ErrataDraft.updated_at.desc(), ErrataDraft.id.desc())
+        )
+        matched_draft_ids = {
+            draft.arkhamdb_id
+            for draft in active_draft_result.scalars().all()
+            if _draft_content_matches_keyword(draft, normalized_keyword)
+        }
+        if matched_draft_ids:
+            draft_rows = (
+                await db.execute(
+                    base_query
+                    .where(CardIndex.arkhamdb_id.in_(matched_draft_ids))
+                    .order_by(*order_columns)
+                )
+            ).all()
+            for card, file_record in draft_rows:
+                row_key = (card.arkhamdb_id, file_record.relative_path)
+                if row_key not in seen:
+                    rows.append((card, file_record))
+                    seen.add(row_key)
     else:
         rows = list((await db.execute(base_query.order_by(*order_columns))).all())
 
@@ -363,8 +448,17 @@ async def get_local_card_tree(
             "participant_usernames": [],
             "package_id": None,
             "latest_audit_at": None,
+            "face_titles": {},
+            "face_subtitles": {},
             "local_files": [],
         })
+        face_index = get_local_card_face_index(local_card_root, file_record.relative_path)
+        face_title = face_index.title if face_index else ""
+        face_subtitle = face_index.subtitle if face_index else ""
+        if face_title:
+            item["face_titles"][file_record.face] = face_title
+        if face_subtitle:
+            item["face_subtitles"][file_record.face] = face_subtitle
         item["local_files"].append(LocalCardFileResponse.model_validate(file_record).model_dump())
 
     if grouped:
@@ -395,6 +489,7 @@ async def get_local_card_tree(
         for arkhamdb_id, item in grouped.items():
             draft = drafts.get(arkhamdb_id)
             if draft:
+                _overlay_draft_face_titles(item, draft)
                 item["errata_state"] = "待发布" if draft.status == ErrataDraftStatus.WAITING_PUBLISH else "勘误"
                 item["package_id"] = draft.package_id
                 if draft.status == ErrataDraftStatus.ERRATA:
@@ -533,8 +628,6 @@ async def get_card_file_content(arkhamdb_id: str, face: str, db: AsyncSession = 
 @router.post("/{arkhamdb_id}/preview-all")
 async def preview_all_faces(arkhamdb_id: str, db: AsyncSession = Depends(get_db)):
     """进入编辑页时预渲染本地 .card 的所有面"""
-    from app.services.renderer import render_card_preview
-
     result = await db.execute(
         select(LocalCardFile)
         .where(LocalCardFile.arkhamdb_id == arkhamdb_id)
@@ -544,27 +637,22 @@ async def preview_all_faces(arkhamdb_id: str, db: AsyncSession = Depends(get_db)
     if not files:
         raise HTTPException(status_code=404, detail="本地卡牌文件不存在")
 
-    preview_dir = settings.project_root / settings.cache_dir / "previews"
-    preview_dir.mkdir(parents=True, exist_ok=True)
-    items = []
-    for file_record in files:
-        content = load_card_content(
-            settings.project_root / settings.local_card_db,
-            file_record.relative_path,
-            include_picture=True,
-        )
-        if not content:
-            items.append({"face": file_record.face, "relative_path": file_record.relative_path, "preview_url": None, "error": "无法读取文件内容"})
-            continue
-        result_path = render_card_preview(content, preview_dir, f"{arkhamdb_id}_{file_record.face}")
-        items.append({
-            "face": file_record.face,
-            "relative_path": file_record.relative_path,
-            "preview_url": _preview_url_from_path(result_path) if result_path else None,
-            "error": None if result_path else "渲染失败",
-        })
+    return {"items": [_render_local_face_preview(arkhamdb_id, file_record) for file_record in files]}
 
-    return {"items": items}
+
+@router.post("/{arkhamdb_id}/preview-face/{face}")
+async def preview_one_face(arkhamdb_id: str, face: str, db: AsyncSession = Depends(get_db)):
+    """渲染单个本地 .card 面，避免详情页等待所有图片完成"""
+    result = await db.execute(
+        select(LocalCardFile).where(
+            LocalCardFile.arkhamdb_id == arkhamdb_id,
+            LocalCardFile.face == face,
+        )
+    )
+    file_record = result.scalar_one_or_none()
+    if not file_record:
+        raise HTTPException(status_code=404, detail="本地卡牌文件不存在")
+    return _render_local_face_preview(arkhamdb_id, file_record)
 
 
 @router.get("/tts-images/{tts_id}/{side}")
@@ -581,6 +669,7 @@ async def get_tts_image(tts_id: int, side: str, db: AsyncSession = Depends(get_d
     if cached_path:
         path = settings.project_root / cached_path
         if path.exists():
+            ensure_preview_cached_image(path)
             return FileResponse(path, media_type="image/jpeg")
 
     sheet_url = tts.face_url if side == "front" else tts.back_url
@@ -623,7 +712,13 @@ async def preview_card(body: dict, db: AsyncSession = Depends(get_db)):
         source_id, source_face = source_id.rsplit("_", 1)
     card_content = await _merge_original_picture(db, source_id, source_face, card_content)
 
-    result_path = render_card_preview(card_content, preview_dir, arkhamdb_id)
+    result_path = render_card_preview(
+        card_content,
+        preview_dir,
+        arkhamdb_id,
+        dpi=settings.preview_render_dpi,
+        quality=settings.preview_jpeg_quality,
+    )
     if result_path is None:
         raise HTTPException(status_code=500, detail="渲染失败")
 

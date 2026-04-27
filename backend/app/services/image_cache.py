@@ -3,8 +3,37 @@ from pathlib import Path
 from PIL import Image
 from io import BytesIO
 
+from app.config import settings
+
 CARD_W = 750
 CARD_H = 1050
+
+
+def _preview_target_size() -> tuple[int, int]:
+    """根据预览缩放配置计算浏览缓存尺寸。"""
+    scale = min(max(settings.preview_image_scale, 0.1), 1.0)
+    return (max(1, round(CARD_W * scale)), max(1, round(CARD_H * scale)))
+
+
+def _preview_quality() -> int:
+    """限制预览 JPEG 质量范围，避免异常配置导致保存失败。"""
+    return min(max(settings.preview_jpeg_quality, 1), 95)
+
+
+def ensure_preview_cached_image(path: Path) -> None:
+    """将已存在的 TTS 浏览缓存降采样到预览尺寸，避免旧缓存继续占用带宽。"""
+    try:
+        with Image.open(path) as img:
+            target_size = _preview_target_size()
+            if img.size == target_size:
+                return
+            preview_img = img.copy()
+            if preview_img.mode not in {"RGB", "L"}:
+                preview_img = preview_img.convert("RGB")
+            preview_img = preview_img.resize(target_size, Image.Resampling.LANCZOS)
+            preview_img.save(path, "JPEG", quality=_preview_quality())
+    except Exception:
+        return
 
 
 def calc_grid_coords(grid_position: int, grid_width: int) -> tuple[int, int, int, int]:
@@ -55,8 +84,11 @@ def download_and_cut_sheet(
                 card_img = card_img.resize((CARD_W, CARD_H), Image.Resampling.LANCZOS)
     if card_img.mode not in {"RGB", "L"}:
         card_img = card_img.convert("RGB")
+    target_size = _preview_target_size()
+    if card_img.size != target_size:
+        card_img = card_img.resize(target_size, Image.Resampling.LANCZOS)
     expected_path.parent.mkdir(parents=True, exist_ok=True)
-    card_img.save(expected_path, "JPEG", quality=90)
+    card_img.save(expected_path, "JPEG", quality=_preview_quality())
     return str(expected_path)
 
 

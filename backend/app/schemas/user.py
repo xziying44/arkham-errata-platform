@@ -14,11 +14,13 @@ class CreateUserRequest(BaseModel):
     username: str
     password: str
     role: str = "勘误员"
+    note: str = ""
 
 
 class UpdateUserRequest(BaseModel):
     role: str | None = None
     is_active: bool | None = None
+    note: str | None = None
 
 
 class ResetPasswordRequest(BaseModel):
@@ -30,4 +32,5 @@ class UserResponse(BaseModel):
     id: int
     username: str
     role: str
+    note: str
     is_active: bool

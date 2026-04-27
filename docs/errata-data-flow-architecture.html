@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>勘误平台数据流转架构图</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'JetBrains Mono', 'PingFang SC', 'Microsoft YaHei', monospace;
+      background: #020617;
+      min-height: 100vh;
+      padding: 2rem;
+      color: white;
+    }
+
+    .container { max-width: 1200px; margin: 0 auto; }
+
+    .header { margin-bottom: 1.5rem; }
+    .header-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
+
+    .pulse-dot {
+      width: 12px; height: 12px; background: #22d3ee;
+      border-radius: 50%; animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.025em; }
+    .subtitle { color: #94a3b8; font-size: 0.8rem; margin-left: 1.75rem; }
+
+    .diagram-container {
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 1rem;
+      border: 1px solid #1e293b;
+      padding: 1rem;
+      overflow-x: auto;
+    }
+
+    svg { width: 100%; min-width: 1050px; display: block; }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .card {
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 0.75rem;
+      border: 1px solid #1e293b;
+      padding: 1.25rem;
+    }
+
+    .card-header {
+      display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;
+    }
+
+    .card-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .card-dot.cyan { background: #22d3ee; }
+    .card-dot.emerald { background: #34d399; }
+    .card-dot.violet { background: #a78bfa; }
+    .card-dot.amber { background: #fbbf24; }
+    .card-dot.rose { background: #fb7185; }
+    .card-dot.orange { background: #fb923c; }
+
+    .card h3 { font-size: 0.85rem; font-weight: 600; }
+    .card ul { list-style: none; color: #94a3b8; font-size: 0.75rem; }
+    .card li { margin-bottom: 0.3rem; line-height: 1.5; }
+
+    .footer { text-align: center; margin-top: 1.5rem; color: #475569; font-size: 0.75rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-row">
+        <div class="pulse-dot"></div>
+        <h1>勘误平台 (Errata Platform) 数据流转架构</h1>
+      </div>
+      <p class="subtitle">从用户提交勘误 → 审核 → 六步发布管线 → 最终写入文件的完整数据链路</p>
+    </div>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 1100 1080">
+        <defs>
+          <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+          </marker>
+          <marker id="arrow-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#34d399" />
+          </marker>
+          <marker id="arrow-red" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#fb7185" />
+          </marker>
+          <marker id="arrow-cyan" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#22d3ee" />
+          </marker>
+          <marker id="arrow-amber" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#fbbf24" />
+          </marker>
+          <marker id="arrow-violet" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#a78bfa" />
+          </marker>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+
+        <!-- Background -->
+        <rect width="100%" height="100%" fill="url(#grid)" />
+
+        <!-- ====== TITLE ====== -->
+        <text x="550" y="28" fill="white" font-size="16" font-weight="700" text-anchor="middle" letter-spacing="1">勘误平台 — 完整数据流转架构</text>
+
+        <!-- ================================================================ -->
+        <!-- SECTION 1: 数据源层 -->
+        <!-- ================================================================ -->
+        <rect x="20" y="48" width="1060" height="122" rx="10" fill="rgba(30, 41, 59, 0.2)" stroke="#334155" stroke-width="1" stroke-dasharray="6,3"/>
+        <text x="35" y="68" fill="#64748b" font-size="9" font-weight="600">① 数据源层（本地文件系统，Git 仓库）</text>
+
+        <!-- 卡牌数据库 -->
+        <rect x="40" y="78" width="20" height="20" rx="3" fill="#0f172a" />
+        <rect x="40" y="78" width="185" height="78" rx="6" fill="#0f172a" />
+        <rect x="40" y="78" width="185" height="78" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="132" y="102" fill="white" font-size="11" font-weight="600" text-anchor="middle">卡牌数据库/</text>
+        <text x="132" y="118" fill="#94a3b8" font-size="8" text-anchor="middle">.card 文件（JSON）</text>
+        <text x="132" y="132" fill="#64748b" font-size="7" text-anchor="middle">category/cycle/id_face.card</text>
+        <text x="132" y="147" fill="#34d399" font-size="7" text-anchor="middle">⚠ 只读 · 永不修改</text>
+
+        <!-- SCED-downloads -->
+        <rect x="255" y="78" width="195" height="78" rx="6" fill="#0f172a" />
+        <rect x="255" y="78" width="195" height="78" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="352" y="102" fill="white" font-size="11" font-weight="600" text-anchor="middle">SCED-downloads/</text>
+        <text x="352" y="118" fill="#94a3b8" font-size="8" text-anchor="middle">TTS JSON 卡牌数据</text>
+        <text x="352" y="132" fill="#64748b" font-size="7" text-anchor="middle">英文精灵图 + 中文译文</text>
+        <text x="352" y="147" fill="#fbbf24" font-size="7" text-anchor="middle">⚡ 初始化只读 · Step6 写入</text>
+
+        <!-- SCED -->
+        <rect x="480" y="78" width="170" height="78" rx="6" fill="#0f172a" />
+        <rect x="480" y="78" width="170" height="78" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="565" y="102" fill="white" font-size="11" font-weight="600" text-anchor="middle">SCED/</text>
+        <text x="565" y="118" fill="#94a3b8" font-size="8" text-anchor="middle">官方英文玩家卡</text>
+        <text x="565" y="132" fill="#64748b" font-size="7" text-anchor="middle">AllPlayerCards.15bb07</text>
+        <text x="565" y="147" fill="#34d399" font-size="7" text-anchor="middle">⚠ 只读 · 永不修改</text>
+
+        <!-- arkham-card-maker -->
+        <rect x="680" y="78" width="180" height="78" rx="6" fill="#0f172a" />
+        <rect x="680" y="78" width="180" height="78" rx="6" fill="rgba(120, 53, 15, 0.25)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="770" y="102" fill="white" font-size="11" font-weight="600" text-anchor="middle">arkham-card-maker/</text>
+        <text x="770" y="118" fill="#94a3b8" font-size="8" text-anchor="middle">卡牌渲染引擎</text>
+        <text x="770" y="132" fill="#64748b" font-size="7" text-anchor="middle">CardRenderer API</text>
+        <text x="770" y="147" fill="#34d399" font-size="7" text-anchor="middle">⚠ 只读 · 渲染依赖</text>
+
+        <!-- Data Repo Sync (right side) -->
+        <rect x="890" y="78" width="175" height="78" rx="6" fill="#0f172a" />
+        <rect x="890" y="78" width="175" height="78" rx="6" fill="rgba(251, 146, 60, 0.15)" stroke="#fb923c" stroke-width="1" stroke-dasharray="4,2"/>
+        <text x="977" y="100" fill="#fb923c" font-size="9" font-weight="600" text-anchor="middle">data_repo_sync</text>
+        <text x="977" y="116" fill="#94a3b8" font-size="7" text-anchor="middle">git fetch --prune</text>
+        <text x="977" y="130" fill="#94a3b8" font-size="7" text-anchor="middle">git reset --hard</text>
+        <text x="977" y="148" fill="#fb7185" font-size="7" text-anchor="middle">⚡ 强制覆盖本地修改</text>
+
+        <!-- Sync arrows to data repos -->
+        <line x1="890" y1="117" x2="865" y2="117" stroke="#fb923c" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#arrow-amber)"/>
+        <line x1="890" y1="140" x2="655" y2="140" stroke="#fb923c" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#arrow-amber)"/>
+
+        <!-- ================================================================ -->
+        <!-- SECTION 2: 扫描与索引层 -->
+        <!-- ================================================================ -->
+        <rect x="20" y="182" width="1060" height="112" rx="10" fill="rgba(6, 78, 59, 0.08)" stroke="#334155" stroke-width="1" stroke-dasharray="6,3"/>
+        <text x="35" y="202" fill="#64748b" font-size="9" font-weight="600">② 初始化扫描 &amp; 数据库索引（首次启动时执行，可手动重新扫描）</text>
+
+        <!-- Scanner -->
+        <rect x="40" y="212" width="20" height="20" rx="3" fill="#0f172a" />
+        <rect x="40" y="212" width="175" height="68" rx="6" fill="#0f172a" />
+        <rect x="40" y="212" width="175" height="68" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="127" y="236" fill="white" font-size="10" font-weight="600" text-anchor="middle">scanner.py</text>
+        <text x="127" y="252" fill="#94a3b8" font-size="8" text-anchor="middle">scan_card_database()</text>
+        <text x="127" y="266" fill="#64748b" font-size="7" text-anchor="middle">解析 .card → 剥离 base64 → 哈希</text>
+        <text x="127" y="276" fill="#34d399" font-size="7" text-anchor="middle">⚠ 只读文件</text>
+
+        <!-- Scanner → CardIndex + LocalCardFile -->
+        <line x1="215" y1="246" x2="250" y2="246" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+
+        <!-- DB: card_index + local_card_files -->
+        <rect x="255" y="212" width="200" height="68" rx="6" fill="#0f172a" />
+        <rect x="255" y="212" width="200" height="68" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="355" y="234" fill="white" font-size="10" font-weight="600" text-anchor="middle">card_index</text>
+        <text x="355" y="248" fill="#94a3b8" font-size="7" text-anchor="middle">arkhamdb_id (PK)</text>
+        <text x="355" y="260" fill="#94a3b8" font-size="7" text-anchor="middle">name_zh, category, cycle</text>
+        <text x="355" y="274" fill="#a78bfa" font-size="7" text-anchor="middle">local_card_files (FK)</text>
+
+        <!-- TTS Parser -->
+        <rect x="490" y="212" width="175" height="68" rx="6" fill="#0f172a" />
+        <rect x="490" y="212" width="175" height="68" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="577" y="236" fill="white" font-size="10" font-weight="600" text-anchor="middle">tts_parser.py</text>
+        <text x="577" y="252" fill="#94a3b8" font-size="8" text-anchor="middle">scan_tts_directory()</text>
+        <text x="577" y="266" fill="#64748b" font-size="7" text-anchor="middle">解析 TTS JSON → 卡图URL</text>
+        <text x="577" y="276" fill="#34d399" font-size="7" text-anchor="middle">⚠ 只读文件</text>
+
+        <!-- TTS Parser → tts_card_images -->
+        <line x1="665" y1="246" x2="700" y2="246" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+
+        <!-- DB: tts_card_images + shared_card_backs -->
+        <rect x="705" y="212" width="210" height="68" rx="6" fill="#0f172a" />
+        <rect x="705" y="212" width="210" height="68" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="810" y="234" fill="white" font-size="10" font-weight="600" text-anchor="middle">tts_card_images</text>
+        <text x="810" y="248" fill="#94a3b8" font-size="7" text-anchor="middle">source: 英文/中文</text>
+        <text x="810" y="260" fill="#94a3b8" font-size="7" text-anchor="middle">face_url, back_url, card_id</text>
+        <text x="810" y="274" fill="#a78bfa" font-size="7" text-anchor="middle">shared_card_backs (公共卡背)</text>
+
+        <!-- Arrows: data sources → scanner/parser -->
+        <path d="M 132 156 L 132 192 Q 132 202 127 202 L 127 210" fill="none" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <path d="M 352 156 L 352 186 Q 352 196 490 196 L 490 210" fill="none" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <path d="M 565 156 L 565 186 Q 565 196 577 196 L 577 210" fill="none" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+        <!-- ================================================================ -->
+        <!-- SECTION 3: 勘误提交 -->
+        <!-- ================================================================ -->
+        <rect x="20" y="306" width="1060" height="142" rx="10" fill="rgba(8, 51, 68, 0.08)" stroke="#334155" stroke-width="1" stroke-dasharray="6,3"/>
+        <text x="35" y="326" fill="#64748b" font-size="9" font-weight="600">③ 用户勘误提交（核心交互流程）</text>
+
+        <!-- Frontend -->
+        <rect x="40" y="336" width="20" height="20" rx="3" fill="#0f172a" />
+        <rect x="40" y="336" width="210" height="84" rx="6" fill="#0f172a" />
+        <rect x="40" y="336" width="210" height="84" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="145" y="358" fill="white" font-size="10" font-weight="600" text-anchor="middle">前端: CardBrowserPage</text>
+        <text x="145" y="374" fill="#94a3b8" font-size="8" text-anchor="middle">左侧: 卡牌分类树</text>
+        <text x="145" y="388" fill="#94a3b8" font-size="8" text-anchor="middle">右侧: 六图对比 + Monaco编辑器</text>
+        <text x="145" y="402" fill="#94a3b8" font-size="8" text-anchor="middle">加载 .card JSON（不含图片）</text>
+        <text x="145" y="416" fill="#22d3ee" font-size="7" text-anchor="middle">⚠ 用户编辑的是 JSON 副本</text>
+
+        <!-- Arrow to API -->
+        <line x1="250" y1="378" x2="290" y2="378" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow-cyan)"/>
+        <text x="270" y="372" fill="#22d3ee" font-size="7" text-anchor="middle">POST</text>
+
+        <!-- Backend API -->
+        <rect x="295" y="345" width="180" height="68" rx="6" fill="#0f172a" />
+        <rect x="295" y="345" width="180" height="68" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="385" y="368" fill="white" font-size="10" font-weight="600" text-anchor="middle">POST /api/errata</text>
+        <text x="385" y="384" fill="#94a3b8" font-size="8" text-anchor="middle">errata.py: submit_errata()</text>
+        <text x="385" y="398" fill="#64748b" font-size="7" text-anchor="middle">JSON→序列化为 Text 存储</text>
+        <text x="385" y="410" fill="#64748b" font-size="7" text-anchor="middle">status = PENDING</text>
+
+        <!-- Arrow to Errata Table -->
+        <line x1="475" y1="379" x2="520" y2="379" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+
+        <!-- Errata Table -->
+        <rect x="525" y="336" width="240" height="98" rx="6" fill="#0f172a" />
+        <rect x="525" y="336" width="240" height="98" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="645" y="356" fill="white" font-size="10" font-weight="600" text-anchor="middle">📋 errata 表（勘误记录）</text>
+        <text x="645" y="374" fill="#94a3b8" font-size="7" text-anchor="middle">arkhamdb_id → card_index (FK)</text>
+        <text x="645" y="388" fill="#94a3b8" font-size="7" text-anchor="middle">original_content (原始 .card JSON)</text>
+        <text x="645" y="402" fill="#94a3b8" font-size="7" text-anchor="middle">modified_content (修改后 .card JSON)</text>
+        <text x="645" y="416" fill="#fbbf24" font-size="7" text-anchor="middle">status: PENDING / APPROVED / REJECTED</text>
+        <text x="645" y="430" fill="#64748b" font-size="7" text-anchor="middle">batch_id, reviewer_id, review_note</text>
+
+        <!-- Frontend loads from local_card_files -->
+        <path d="M 355 278 L 355 306 Q 355 316 250 316 L 250 334" fill="none" stroke="#a78bfa" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow-violet)"/>
+        <text x="290" y="312" fill="#a78bfa" font-size="7">加载原始 .card JSON</text>
+
+        <!-- ================================================================ -->
+        <!-- SECTION 4: 管理员审核 -->
+        <!-- ================================================================ -->
+        <rect x="20" y="460" width="1060" height="115" rx="10" fill="rgba(136, 19, 55, 0.05)" stroke="#334155" stroke-width="1" stroke-dasharray="6,3"/>
+        <text x="35" y="480" fill="#64748b" font-size="9" font-weight="600">④ 管理员审核（批量审批）</text>
+
+        <!-- Admin Frontend -->
+        <rect x="40" y="492" width="20" height="20" rx="3" fill="#0f172a" />
+        <rect x="40" y="492" width="180" height="68" rx="6" fill="#0f172a" />
+        <rect x="40" y="492" width="180" height="68" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="130" y="516" fill="white" font-size="10" font-weight="600" text-anchor="middle">前端: ReviewPage</text>
+        <text x="130" y="532" fill="#94a3b8" font-size="8" text-anchor="middle">待审核列表（按卡牌去重）</text>
+        <text x="130" y="546" fill="#94a3b8" font-size="8" text-anchor="middle">勾选 → 批量通过 / 批量驳回</text>
+        <text x="130" y="558" fill="#fb7185" font-size="7" text-anchor="middle">🔒 仅管理员可访问</text>
+
+        <line x1="220" y1="526" x2="260" y2="526" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow-cyan)"/>
+
+        <!-- Review API -->
+        <rect x="265" y="496" width="200" height="60" rx="6" fill="#0f172a" />
+        <rect x="265" y="496" width="200" height="60" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="365" y="518" fill="white" font-size="10" font-weight="600" text-anchor="middle">POST /api/admin/review</text>
+        <text x="365" y="534" fill="#94a3b8" font-size="8" text-anchor="middle">batch_approve / batch_reject</text>
+        <text x="365" y="550" fill="#64748b" font-size="7" text-anchor="middle">关联 batch_id · 记录 reviewer_id</text>
+
+        <line x1="465" y1="526" x2="510" y2="526" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+
+        <!-- Status Result -->
+        <rect x="515" y="490" width="250" height="75" rx="6" fill="#0f172a" />
+        <rect x="515" y="490" width="250" height="75" rx="6" fill="rgba(76, 29, 149, 0.3)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="640" y="514" fill="white" font-size="10" font-weight="600" text-anchor="middle">errata 状态变更</text>
+        <text x="640" y="532" fill="#34d399" font-size="9" text-anchor="middle">✅ APPROVED = "已通过"</text>
+        <text x="640" y="548" fill="#94a3b8" font-size="8" text-anchor="middle">→ 进入发布管线（关联 batch_id）</text>
+        <text x="640" y="562" fill="#fb7185" font-size="9" text-anchor="middle">❌ REJECTED = "已驳回"</text>
+
+        <!-- Pending errata query -->
+        <path d="M 645 434 L 645 454 Q 645 464 640 464 L 640 488" fill="none" stroke="#fbbf24" stroke-width="1.2" marker-end="url(#arrow-amber)"/>
+
+        <!-- ================================================================ -->
+        <!-- SECTION 5: 六步发布管线 -->
+        <!-- ================================================================ -->
+        <rect x="20" y="587" width="1060" height="240" rx="10" fill="rgba(251, 191, 36, 0.05)" stroke="#334155" stroke-width="1" stroke-dasharray="6,3"/>
+        <text x="35" y="607" fill="#64748b" font-size="9" font-weight="600">⑤ 六步发布管线（唯一真正修改文件的环节）</text>
+
+        <!-- Step 1 -->
+        <rect x="35" y="618" width="155" height="85" rx="6" fill="#0f172a" />
+        <rect x="35" y="618" width="155" height="85" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="112" y="640" fill="white" font-size="9" font-weight="600" text-anchor="middle">Step 1: 渲染卡图</text>
+        <text x="112" y="656" fill="#94a3b8" font-size="7" text-anchor="middle">读取 modified_content</text>
+        <text x="112" y="670" fill="#94a3b8" font-size="7" text-anchor="middle">→ arkham-card-maker</text>
+        <text x="112" y="684" fill="#94a3b8" font-size="7" text-anchor="middle">→ render_card_preview()</text>
+        <text x="112" y="698" fill="#64748b" font-size="7" text-anchor="middle">输出: 临时 JPG 卡图</text>
+
+        <!-- Arrow Step1→2 -->
+        <line x1="190" y1="660" x2="210" y2="660" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arrow-amber)"/>
+
+        <!-- Step 2 -->
+        <rect x="215" y="618" width="155" height="85" rx="6" fill="#0f172a" />
+        <rect x="215" y="618" width="155" height="85" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="292" y="640" fill="white" font-size="9" font-weight="600" text-anchor="middle">Step 2: 拼合精灵图</text>
+        <text x="292" y="656" fill="#94a3b8" font-size="7" text-anchor="middle">group_cards_by_sheet</text>
+        <text x="292" y="670" fill="#94a3b8" font-size="7" text-anchor="middle">create_decksheet()</text>
+        <text x="292" y="684" fill="#94a3b8" font-size="7" text-anchor="middle">每张精灵图≤30张卡</text>
+        <text x="292" y="698" fill="#64748b" font-size="7" text-anchor="middle">输出: 750x1050 大图</text>
+
+        <line x1="370" y1="660" x2="390" y2="660" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arrow-amber)"/>
+
+        <!-- Step 3 -->
+        <rect x="395" y="618" width="155" height="85" rx="6" fill="#0f172a" />
+        <rect x="395" y="618" width="155" height="85" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="472" y="640" fill="white" font-size="9" font-weight="600" text-anchor="middle">Step 3: 上传图床</text>
+        <text x="472" y="656" fill="#94a3b8" font-size="7" text-anchor="middle">Cloudinary / ImgBB</text>
+        <text x="472" y="670" fill="#94a3b8" font-size="7" text-anchor="middle">/ Localhost</text>
+        <text x="472" y="684" fill="#94a3b8" font-size="7" text-anchor="middle">create_uploader().upload()</text>
+        <text x="472" y="698" fill="#64748b" font-size="7" text-anchor="middle">输出: CDN URL 映射表</text>
+
+        <line x1="550" y1="660" x2="570" y2="660" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arrow-amber)"/>
+
+        <!-- Step 4 -->
+        <rect x="575" y="618" width="155" height="85" rx="6" fill="#0f172a" />
+        <rect x="575" y="618" width="155" height="85" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="652" y="640" fill="white" font-size="9" font-weight="600" text-anchor="middle">Step 4: 导出TTS包</text>
+        <text x="652" y="656" fill="#94a3b8" font-size="7" text-anchor="middle">generate_tts_bag_json()</text>
+        <text x="652" y="670" fill="#94a3b8" font-size="7" text-anchor="middle">生成 CustomDeck +</text>
+        <text x="652" y="684" fill="#94a3b8" font-size="7" text-anchor="middle">CardID + GMNotes</text>
+        <text x="652" y="698" fill="#64748b" font-size="7" text-anchor="middle">→ 下载 JSON 文件</text>
+
+        <path d="M 730 660 L 750 660" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arrow-amber)"/>
+
+        <!-- Step 5 -->
+        <rect x="755" y="618" width="155" height="85" rx="6" fill="#0f172a" />
+        <rect x="755" y="618" width="155" height="85" rx="6" fill="rgba(251, 146, 60, 0.2)" stroke="#fb923c" stroke-width="1.5" stroke-dasharray="5,3"/>
+        <text x="832" y="638" fill="#fb923c" font-size="8" font-weight="600" text-anchor="middle">Step 5: TTS 手动</text>
+        <text x="832" y="654" fill="#94a3b8" font-size="7" text-anchor="middle">TTS 内加载存档包</text>
+        <text x="832" y="668" fill="#94a3b8" font-size="7" text-anchor="middle">重新保存 → 导出</text>
+        <text x="832" y="682" fill="#94a3b8" font-size="7" text-anchor="middle">产生 Steam CDN URL</text>
+        <text x="832" y="698" fill="#fb923c" font-size="7" text-anchor="middle">⚡ 手动步骤，不在平台内</text>
+
+        <line x1="910" y1="660" x2="930" y2="660" stroke="#fb923c" stroke-width="1.5" marker-end="url(#arrow-amber)"/>
+
+        <!-- Step 6 (THE WRITE STEP) -->
+        <rect x="935" y="608" width="130" height="105" rx="6" fill="#0f172a" />
+        <rect x="935" y="608" width="130" height="105" rx="6" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="2"/>
+        <text x="1000" y="630" fill="#fb7185" font-size="9" font-weight="600" text-anchor="middle">Step 6: 🔴</text>
+        <text x="1000" y="646" fill="#fb7185" font-size="9" font-weight="600" text-anchor="middle">替换中文URL</text>
+        <text x="1000" y="662" fill="#94a3b8" font-size="7" text-anchor="middle">extract_steam_urls</text>
+        <text x="1000" y="676" fill="#94a3b8" font-size="7" text-anchor="middle">replace_chinese_card_urls()</text>
+        <text x="1000" y="692" fill="#fb7185" font-size="7" text-anchor="middle">真正写入文件！</text>
+        <text x="1000" y="708" fill="#fb7185" font-size="7" text-anchor="middle">修改 FaceURL/BackURL</text>
+
+        <!-- Upload JSON to Step 5 -->
+        <rect x="755" y="718" width="155" height="40" rx="4" fill="#0f172a" />
+        <rect x="755" y="718" width="155" height="40" rx="4" fill="rgba(76, 29, 149, 0.2)" stroke="#a78bfa" stroke-width="1"/>
+        <text x="832" y="736" fill="#a78bfa" font-size="7" text-anchor="middle">POST upload-tts-json</text>
+        <text x="832" y="750" fill="#94a3b8" font-size="7" text-anchor="middle">提取 Steam URL 映射</text>
+
+        <line x1="832" y1="703" x2="832" y2="716" stroke="#a78bfa" stroke-width="1.2" marker-end="url(#arrow-violet)"/>
+
+        <!-- Arrow from Step 5 → Step 6 (via upload) -->
+        <path d="M 910 738 L 925 738 Q 935 738 935 700 L 935 688" fill="none" stroke="#a78bfa" stroke-width="1.2" marker-end="url(#arrow-violet)"/>
+
+        <!-- ================================================================ -->
+        <!-- SECTION 6: 文件修改详情 -->
+        <!-- ================================================================ -->
+        <rect x="20" y="840" width="1060" height="115" rx="10" fill="rgba(136, 19, 55, 0.06)" stroke="#334155" stroke-width="1" stroke-dasharray="6,3"/>
+        <text x="35" y="860" fill="#64748b" font-size="9" font-weight="600">⑥ 最终结论：哪些文件被修改？</text>
+
+        <!-- NOT Modified -->
+        <rect x="40" y="872" width="310" height="68" rx="6" fill="#0f172a" />
+        <rect x="40" y="872" width="310" height="68" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="195" y="896" fill="#34d399" font-size="10" font-weight="600" text-anchor="middle">✅ 卡牌数据库/ .card 文件：永不修改</text>
+        <text x="195" y="914" fill="#94a3b8" font-size="7" text-anchor="middle">勘误系统的整个流程中，本地 .card 文件始终只读</text>
+        <text x="195" y="928" fill="#94a3b8" font-size="7" text-anchor="middle">用户编辑的是 JSON 副本，修改后的内容存入 errata 表</text>
+        <text x="195" y="940" fill="#64748b" font-size="7" text-anchor="middle">即使 data_repo_sync 也会用 git reset --hard 覆盖本地</text>
+
+        <!-- MODIFIED (Step 6) -->
+        <rect x="375" y="872" width="320" height="68" rx="6" fill="#0f172a" />
+        <rect x="375" y="872" width="320" height="68" rx="6" fill="rgba(136, 19, 55, 0.2)" stroke="#fb7185" stroke-width="1.5"/>
+        <text x="535" y="896" fill="#fb7185" font-size="10" font-weight="600" text-anchor="middle">🔴 SCED-downloads 中文 TTS JSON：Step 6 修改</text>
+        <text x="535" y="914" fill="#94a3b8" font-size="7" text-anchor="middle">仅当执行发布管线 Step 6 时，replace_chinese_card_urls() 会</text>
+        <text x="535" y="928" fill="#94a3b8" font-size="7" text-anchor="middle">遍历中文卡牌 JSON，替换 FaceURL / BackURL / CardID 字段</text>
+        <text x="535" y="940" fill="#fb7185" font-size="7" text-anchor="middle">⚠ 但 data_repo_sync 的 git reset --hard 会覆盖这些修改！</text>
+
+        <!-- Processed via TTS -->
+        <rect x="720" y="872" width="310" height="68" rx="6" fill="#0f172a" />
+        <rect x="720" y="872" width="310" height="68" rx="6" fill="rgba(251, 191, 36, 0.1)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="875" y="896" fill="#fbbf24" font-size="10" font-weight="600" text-anchor="middle">⚡ TTS 存档包 JSON：一次性产物</text>
+        <text x="875" y="914" fill="#94a3b8" font-size="7" text-anchor="middle">Step 3 生成的 TTS 存档包是发布中间产物</text>
+        <text x="875" y="928" fill="#94a3b8" font-size="7" text-anchor="middle">用户在 TTS 内加载 → 保存 → 导出，产生 Steam URL</text>
+        <text x="875" y="940" fill="#64748b" font-size="7" text-anchor="middle">Steam URL 最终被回写到 SCED-downloads 中文 JSON</text>
+
+        <!-- Arrow from Step 6 to modified file -->
+        <path d="M 1000 713 L 1000 840 Q 1000 850 700 850 L 535 870" fill="none" stroke="#fb7185" stroke-width="2" marker-end="url(#arrow-red)" stroke-dasharray="6,3"/>
+        <text x="810" y="864" fill="#fb7185" font-size="7" text-anchor="middle">🔴 唯一真正写入文件的路径</text>
+
+      </svg>
+    </div>
+
+    <!-- Info Cards -->
+    <div class="cards">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot emerald"></div>
+          <h3>核心结论：勘误不直接修改卡牌数据库</h3>
+        </div>
+        <ul>
+          <li>• 用户提交的勘误以"修改提案"形式存入 errata 表</li>
+          <li>• original_content 和 modified_content 都是 JSON 字符串</li>
+          <li>• 本地卡牌数据库/ .card 文件在整个流程中始终只读</li>
+          <li>• 审核通过仅改变 errata.status，不触发任何文件写入</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot rose"></div>
+          <h3>数据何时真正写入文件？</h3>
+        </div>
+        <ul>
+          <li>• 唯一写入时机：管理员执行发布管线 Step 6</li>
+          <li>• 写入目标：SCED-downloads/ 中文 TTS JSON 文件</li>
+          <li>• 修改字段：FaceURL、BackURL、CardID、CustomDeck</li>
+          <li>• 但 data_repo_sync 的 git reset --hard 会强制覆盖</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot amber"></div>
+          <h3>数据流转关键节点</h3>
+        </div>
+        <ul>
+          <li>• .card 文件 → scanner → card_index/local_card_files（索引）</li>
+          <li>• 前端加载 JSON 副本 → 用户编辑 → errata 表（提案）</li>
+          <li>• 审核通过 → 发布管线 → 渲染 → 图床上传 → TTS 导出</li>
+          <li>• TTS 回写 URL → SCED-downloads 中文 JSON（唯一写入）</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="footer">
+      勘误平台 (Errata Platform) · 数据流转架构 · 基于代码实际链路分析
+    </p>
+  </div>
+</body>
+</html>

@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     sced_downloads: Path = Path("../SCED-downloads")
     sced_repo: Path = Path("../SCED")
     cache_dir: Path = Path("data/cache")
+    preview_image_scale: float = 0.5
+    preview_jpeg_quality: int = 70
+    preview_render_dpi: int = 150
     data_repo_sync_enabled: bool = False
     data_repo_sync_interval_minutes: int = 60
     git_executable: str = "git"

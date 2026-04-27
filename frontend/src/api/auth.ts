@@ -16,12 +16,12 @@ export async function fetchUsers(): Promise<User[]> {
   return resp.data;
 }
 
-export async function createUser(data: { username: string; password: string; role: UserRole }): Promise<User> {
+export async function createUser(data: { username: string; password: string; role: UserRole; note?: string }): Promise<User> {
   const resp = await client.post('/auth/users', data);
   return resp.data;
 }
 
-export async function updateUser(userId: number, data: { role?: UserRole; is_active?: boolean }): Promise<User> {
+export async function updateUser(userId: number, data: { role?: UserRole; is_active?: boolean; note?: string }): Promise<User> {
   const resp = await client.patch(`/auth/users/${userId}`, data);
   return resp.data;
 }

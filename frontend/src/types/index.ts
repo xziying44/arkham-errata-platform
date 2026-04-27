@@ -7,6 +7,7 @@ export interface User {
   id: number;
   username: string;
   role: UserRole;
+  note: string;
   is_active: boolean;
 }
 
@@ -157,6 +158,8 @@ export interface ErrataPackage {
 
 export interface CardTreeCard extends CardIndex {
   local_files: LocalCardFile[];
+  face_titles: Record<string, string>;
+  face_subtitles: Record<string, string>;
   pending_errata_count: number;
   approved_errata_count: number;
   latest_batch_id: string | null;

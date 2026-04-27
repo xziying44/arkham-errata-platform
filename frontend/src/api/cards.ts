@@ -1,5 +1,5 @@
 import client from './client';
-import type { CardDetail, CardTreeResponse, PreviewAllResponse } from '../types';
+import type { CardDetail, CardTreeResponse, PreviewAllResponse, PreviewFace } from '../types';
 
 export async function fetchCards(params: { category?: string; cycle?: string; keyword?: string; mapping_status?: string; page?: number; page_size?: number }) {
   const resp = await client.get('/cards', { params });
@@ -23,5 +23,10 @@ export async function fetchCardDetail(arkhamdbId: string): Promise<CardDetail> {
 
 export async function previewAllFaces(arkhamdbId: string): Promise<PreviewAllResponse> {
   const resp = await client.post(`/cards/${arkhamdbId}/preview-all`);
+  return resp.data;
+}
+
+export async function previewOneFace(arkhamdbId: string, face: string): Promise<PreviewFace> {
+  const resp = await client.post(`/cards/${arkhamdbId}/preview-face/${face}`);
   return resp.data;
 }

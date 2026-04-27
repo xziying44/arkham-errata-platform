@@ -250,15 +250,30 @@ async def resolve_card_image_mappings(db: AsyncSession, arkhamdb_id: str) -> lis
         )
     ).scalars().all()
     tts_by_id = {item.id: item for item in tts_items}
+    sorted_tts_items = sorted(tts_items, key=tts_candidate_priority)
     first_by_source: dict[str, TTSCardImage] = {}
-    for item in sorted(tts_items, key=tts_candidate_priority):
+    for item in sorted_tts_items:
         if item.arkhamdb_id == arkhamdb_id:
             first_by_source.setdefault(item.source, item)
-    for item in sorted(tts_items, key=tts_candidate_priority):
+    for item in sorted_tts_items:
         if item.arkhamdb_id in explicit_lookup_ids:
             first_by_source.setdefault(item.source, item)
-    for item in sorted(tts_items, key=tts_candidate_priority):
+    for item in sorted_tts_items:
         first_by_source.setdefault(item.source, item)
+
+    def resolve_tts(source: str, explicit: dict[str, Any]) -> tuple[TTSCardImage | None, bool]:
+        """优先用稳定 arkhamdb 编号解析，避免跨环境数据库自增 ID 漂移。"""
+        lookup_id = explicit.get("tts_lookup_id")
+        if lookup_id:
+            for item in sorted_tts_items:
+                if item.source == source and item.arkhamdb_id == lookup_id:
+                    return item, True
+        tts_id = explicit.get("tts_id")
+        if tts_id:
+            tts = tts_by_id.get(tts_id)
+            if tts and tts.source == source:
+                return tts, True
+        return first_by_source.get(source), False
 
     resolved: list[dict[str, Any]] = []
 
@@ -268,10 +283,8 @@ async def resolve_card_image_mappings(db: AsyncSession, arkhamdb_id: str) -> lis
         canonical_side = english_explicit.get("tts_side") or fallback_side
         for source in ["英文", "中文"]:
             explicit = face_records.get(local_file.face, {}).get(source, {})
-            tts_id = explicit.get("tts_id")
             tts_side = explicit.get("tts_side") or canonical_side
-            tts = tts_by_id.get(tts_id) if tts_id else first_by_source.get(source)
-            is_explicit = bool(tts_id and tts)
+            tts, is_explicit = resolve_tts(source, explicit)
             resolved.append({
                 "local_face": local_file.face,
                 "source": source,

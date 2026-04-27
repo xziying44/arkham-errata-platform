@@ -213,14 +213,12 @@ async def test_local_card_tree_filters_by_card_content(client, db, monkeypatch):
     ))
     await db.commit()
 
-    def fake_load_card_content(root, relative_path, include_picture=False):
-        return {
-            "name": "遭遇组搜索",
-            "encounter_group": "crimson_conspiracy",
-            "body": "只有正文里出现的检索词",
-        }
+    def fake_search(root, keyword):
+        if keyword in {"crimson_conspiracy", "检索词"}:
+            return {"剧本卡/09_绯红密钥/91006_a.card"}
+        return set()
 
-    monkeypatch.setattr("app.api.cards.load_card_content", fake_load_card_content)
+    monkeypatch.setattr("app.api.cards.search_local_card_index", fake_search)
 
     encounter_resp = await client.get("/api/cards/tree", params={"keyword": "crimson_conspiracy"})
     content_resp = await client.get("/api/cards/tree", params={"keyword": "检索词"})
@@ -229,6 +227,36 @@ async def test_local_card_tree_filters_by_card_content(client, db, monkeypatch):
     assert content_resp.status_code == 200
     assert "91006" in json.dumps(encounter_resp.json(), ensure_ascii=False)
     assert "91006" in json.dumps(content_resp.json(), ensure_ascii=False)
+
+
+@pytest.mark.asyncio
+async def test_local_card_tree_uses_index_without_reading_card_files(client, db, monkeypatch):
+    card = CardIndex(arkhamdb_id="91007", name_zh="索引标题", category="剧本卡", cycle="09_绯红密钥")
+    db.add(card)
+    await db.flush()
+    db.add(LocalCardFile(
+        arkhamdb_id="91007",
+        face="a",
+        relative_path="剧本卡/09_绯红密钥/91007_a.card",
+        content_hash="hash",
+        last_modified="0",
+    ))
+    await db.commit()
+
+    class FakeFaceIndex:
+        title = "索引正面标题"
+        subtitle = "索引副标题"
+
+    monkeypatch.setattr("app.api.cards.ensure_local_card_index", lambda root: None)
+    monkeypatch.setattr("app.api.cards.get_local_card_face_index", lambda root, relative_path: FakeFaceIndex())
+    monkeypatch.setattr("app.api.cards.load_card_content", lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("不应读取 .card 文件")))
+
+    resp = await client.get("/api/cards/tree", params={"keyword": "91007"})
+
+    assert resp.status_code == 200
+    text = json.dumps(resp.json(), ensure_ascii=False)
+    assert "索引正面标题" in text
+    assert "索引副标题" in text
 
 
 @pytest.mark.asyncio
@@ -297,7 +325,7 @@ async def test_preview_all_renders_each_local_face(client, db, monkeypatch):
             content["picture_base64"] = "data:image/png;base64,AAAA"
         return content
 
-    def fake_render(card_content, output_dir, filename):
+    def fake_render(card_content, output_dir, filename, dpi=150, quality=90):
         path = settings.project_root / settings.cache_dir / "previews" / f"{filename}.jpg"
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(b"fake image")
@@ -324,7 +352,7 @@ async def test_preview_all_uses_picture_base64_for_rendering(client, db, monkeyp
     def fake_load_card_content(root, relative_path, include_picture=False):
         return {"name": "背景预览", "type": "地点卡", **({"picture_base64": "data:image/png;base64,AAAA"} if include_picture else {})}
 
-    def fake_render(card_content, output_dir, filename):
+    def fake_render(card_content, output_dir, filename, dpi=150, quality=90):
         assert card_content["picture_base64"] == "data:image/png;base64,AAAA"
         path = settings.project_root / settings.cache_dir / "previews" / f"{filename}.jpg"
         path.parent.mkdir(parents=True, exist_ok=True)

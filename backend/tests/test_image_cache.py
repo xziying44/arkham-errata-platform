@@ -46,7 +46,7 @@ def test_single_card_back_image_is_not_cropped_with_grid_offset(tmp_path, monkey
 
     assert result is not None
     cached = Image.open(result)
-    assert cached.size == (750, 1050)
+    assert cached.size == (375, 525)
 
 
 def test_downscaled_deck_sheet_is_cropped_and_resized(tmp_path, monkeypatch):
@@ -83,6 +83,62 @@ def test_downscaled_deck_sheet_is_cropped_and_resized(tmp_path, monkeypatch):
 
     assert result is not None
     cached = Image.open(result)
-    assert cached.size == (750, 1050)
-    center = cached.getpixel((375, 525))
+    assert cached.size == (375, 525)
+    center = cached.getpixel((187, 262))
     assert center[0] > 200 and center[1] < 40 and center[2] < 40
+
+
+def test_download_and_cut_sheet_uses_preview_scale_and_quality(tmp_path, monkeypatch):
+    """TTS 参考图缓存应按预览配置半尺寸降采样，减少服务器带宽占用。"""
+    from app.services import image_cache
+
+    source = Image.new("RGB", (750, 1050), (255, 0, 0))
+    buffer = BytesIO()
+    source.save(buffer, format="JPEG")
+
+    class FakeResponse:
+        content = buffer.getvalue()
+
+        def raise_for_status(self):
+            return None
+
+    saved = {}
+    original_save = Image.Image.save
+
+    def capture_save(self, fp, format=None, **params):
+        saved["quality"] = params.get("quality")
+        return original_save(self, fp, format=format, **params)
+
+    monkeypatch.setattr(image_cache.httpx, "get", lambda *args, **kwargs: FakeResponse())
+    monkeypatch.setattr(image_cache.settings, "preview_image_scale", 0.5, raising=False)
+    monkeypatch.setattr(image_cache.settings, "preview_jpeg_quality", 70, raising=False)
+    monkeypatch.setattr(Image.Image, "save", capture_save)
+
+    result = image_cache.download_and_cut_sheet(
+        sheet_url="https://example.test/card.jpg",
+        grid_position=0,
+        grid_width=1,
+        grid_height=1,
+        cache_dir=tmp_path,
+        cache_key="preview-compressed",
+    )
+
+    assert result is not None
+    cached = Image.open(result)
+    assert cached.size == (375, 525)
+    assert saved["quality"] == 70
+
+
+def test_ensure_preview_cached_image_downscales_existing_cache(tmp_path, monkeypatch):
+    """已缓存的旧大图再次访问时应自动降采样，避免继续传输大文件。"""
+    from app.services import image_cache
+
+    cached_path = tmp_path / "old-cache.jpg"
+    Image.new("RGB", (750, 1050), (0, 255, 0)).save(cached_path, "JPEG", quality=90)
+    monkeypatch.setattr(image_cache.settings, "preview_image_scale", 0.5, raising=False)
+    monkeypatch.setattr(image_cache.settings, "preview_jpeg_quality", 70, raising=False)
+
+    image_cache.ensure_preview_cached_image(cached_path)
+
+    cached = Image.open(cached_path)
+    assert cached.size == (375, 525)

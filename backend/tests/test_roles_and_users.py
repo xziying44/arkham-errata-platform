@@ -67,3 +67,33 @@ async def test_admin_can_disable_and_reset_password(client: AsyncClient, db):
     )
     assert reset.status_code == 200
     assert reset.json()["ok"] is True
+
+
+@pytest.mark.asyncio
+async def test_admin_can_manage_user_note(client: AsyncClient, db):
+    admin = User(username="admin-note-test", password_hash=hash_password("pw"), role=UserRole.ADMIN)
+    db.add(admin)
+    await db.commit()
+
+    login = await client.post("/api/auth/login", json={"username": "admin-note-test", "password": "pw"})
+    token = login.json()["token"]
+
+    created = await client.post(
+        "/api/auth/users",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"username": "note-user", "password": "pw2", "role": "勘误员", "note": "张三使用"},
+    )
+    assert created.status_code == 200
+    assert created.json()["note"] == "张三使用"
+
+    patched = await client.patch(
+        f"/api/auth/users/{created.json()['id']}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"note": "李四接手"},
+    )
+    assert patched.status_code == 200
+    assert patched.json()["note"] == "李四接手"
+
+    listed = await client.get("/api/auth/users", headers={"Authorization": f"Bearer {token}"})
+    assert listed.status_code == 200
+    assert any(user["username"] == "note-user" and user["note"] == "李四接手" for user in listed.json())

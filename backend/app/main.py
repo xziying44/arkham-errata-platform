@@ -8,12 +8,17 @@ from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.api import auth, cards, errata, review, publish, mapping, errata_drafts, packages
 from app.services.data_repo_sync import periodic_data_repo_sync
+from app.services.local_card_index import build_local_card_index
 from app.services.tts_cache_warmer import start_tts_cache_warmer, stop_tts_cache_warmer
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     stop_event = asyncio.Event()
     sync_task: asyncio.Task | None = None
+    try:
+        await asyncio.to_thread(build_local_card_index, settings.project_root / settings.local_card_db)
+    except Exception as exc:
+        print(f"本地卡牌内容索引构建失败，将在首次请求时重试：{exc}")
     if settings.data_repo_sync_enabled:
         sync_task = asyncio.create_task(periodic_data_repo_sync(stop_event))
     if settings.tts_cache_warm_enabled:
