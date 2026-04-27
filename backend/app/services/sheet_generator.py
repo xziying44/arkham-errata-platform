@@ -8,14 +8,16 @@ from PIL import Image
 CARD_W = 750
 CARD_H = 1050
 MAX_COLS = 10
-MAX_BYTES = 10_485_670
+DEFAULT_JPEG_QUALITY = 85
+DEFAULT_DPI = 300
 
 
 def create_decksheet(
     img_path_list: list[str],
     grid_size: tuple[int, int] | None = None,
     output_path: str = "",
-    quality: int = 90,
+    quality: int = DEFAULT_JPEG_QUALITY,
+    dpi: int = DEFAULT_DPI,
 ) -> str:
     """将卡牌图片列表拼接为精灵图（decksheet）
 
@@ -23,7 +25,8 @@ def create_decksheet(
         img_path_list: 卡牌图片路径列表
         grid_size: 可选的 (rows, cols) 网格尺寸，默认自动计算
         output_path: 输出文件路径
-        quality: JPEG 质量（1-100），会自动降低直至文件 <= 10MB
+        quality: JPEG 质量（1-100），发布默认固定为 85
+        dpi: JPEG 元数据 DPI，发布默认固定为 300
 
     Returns:
         生成的精灵图文件路径
@@ -61,12 +64,7 @@ def create_decksheet(
     output_path = str(output_path)
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-    current_quality = quality
-    while current_quality >= 5:
-        canvas.save(output_path, "JPEG", quality=current_quality)
-        if os.path.getsize(output_path) <= MAX_BYTES:
-            break
-        current_quality -= 5
+    canvas.save(output_path, "JPEG", quality=quality, dpi=(dpi, dpi), subsampling=0)
 
     return output_path
 

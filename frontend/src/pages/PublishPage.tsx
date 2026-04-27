@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Card, Space, Tabs, message } from 'antd';
-import { createPublishSession, fetchDirectoryPresets, fetchPublishSession } from '../api/admin';
+import { Button, Card, Space, Tabs, message } from 'antd';
+import { createPublishSession, fetchDirectoryPresets, fetchPublishSession, initializeDirectoryPresets } from '../api/admin';
 import { fetchPackages, unlockPackage } from '../api/packages';
 import type { ErrataPackage, PublishDirectoryPreset, PublishSession } from '../types';
 import CardWorkbench from '../components/workbench/CardWorkbench';
@@ -13,6 +13,7 @@ export default function PublishPage() {
   const [presets, setPresets] = useState<PublishDirectoryPreset[]>([]);
   const [selectedPackage, setSelectedPackage] = useState<ErrataPackage | null>(null);
   const [session, setSession] = useState<PublishSession | null>(null);
+  const [activeView, setActiveView] = useState<'review' | 'publish' | null>(null);
   const [loading, setLoading] = useState(false);
 
   const loadPackages = async () => {
@@ -45,6 +46,11 @@ export default function PublishPage() {
     loadPresets();
   }, []);
 
+  const handleReviewPackage = (pkg: ErrataPackage) => {
+    setSelectedPackage(pkg);
+    setActiveView('review');
+  };
+
   const handleOpenSession = async (pkg: ErrataPackage) => {
     try {
       const next = pkg.latest_session
@@ -52,10 +58,27 @@ export default function PublishPage() {
         : await createPublishSession(pkg.id);
       setSelectedPackage(pkg);
       setSession(next);
+      setActiveView('publish');
       message.success(pkg.latest_session ? '发布会话已加载' : '发布会话已创建');
       await loadPackages();
     } catch (error: any) {
       message.error(error?.response?.data?.detail || '打开发布会话失败');
+    }
+  };
+
+  const handlePackageCompleted = async () => {
+    setSession(null);
+    setActiveView(null);
+    await loadPackages();
+  };
+
+  const handleInitializePresets = async () => {
+    try {
+      const result = await initializeDirectoryPresets();
+      message.success(`目录索引已初始化：新增 ${result.created} 条，更新 ${result.updated} 条`);
+      await loadPresets();
+    } catch (error: any) {
+      message.error(error?.response?.data?.detail || '初始化目录索引失败');
     }
   };
 
@@ -64,6 +87,7 @@ export default function PublishPage() {
       await unlockPackage(pkg.id, '管理员在发布页解锁');
       message.success('勘误包已解锁退回');
       setSession(null);
+      setActiveView(null);
       await loadPackages();
     } catch (error: any) {
       message.error(error?.response?.data?.detail || '解锁失败');
@@ -84,23 +108,32 @@ export default function PublishPage() {
                     packages={packages}
                     selectedPackageId={selectedPackage?.id || null}
                     loading={loading}
-                    onSelect={setSelectedPackage}
+                    onSelect={handleReviewPackage}
                     onOpenSession={handleOpenSession}
                     onUnlock={handleUnlock}
                   />
-                  <Card title="发布会话" size="small">
-                    <PublishSessionWizard session={session} packageNo={selectedPackage?.package_no} onSessionChange={setSession} />
-                  </Card>
-                  <Card title={selectedPackage ? `发布前审阅：${selectedPackage.package_no}` : '发布前审阅'} size="small">
-                    {selectedPackage ? <CardWorkbench mode="package-review" packageId={selectedPackage.id} /> : '请选择勘误包'}
-                  </Card>
+                  {activeView === 'publish' && (
+                    <Card title="发布流程" size="small">
+                      <PublishSessionWizard session={session} packageNo={selectedPackage?.package_no} onSessionChange={setSession} onPackageCompleted={handlePackageCompleted} />
+                    </Card>
+                  )}
+                  {activeView === 'review' && (
+                    <Card title={selectedPackage ? `发布前审阅：${selectedPackage.package_no}` : '发布前审阅'} size="small">
+                      {selectedPackage ? <CardWorkbench mode="package-review" packageId={selectedPackage.id} /> : '请选择勘误包'}
+                    </Card>
+                  )}
                 </Space>
               ),
             },
             {
               key: 'presets',
               label: '发布目录索引',
-              children: <DirectoryPresetTable presets={presets} />,
+              children: (
+                <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                  <Button type="primary" onClick={handleInitializePresets}>从现有中文 TTS 初始化目录索引</Button>
+                  <DirectoryPresetTable presets={presets} onChanged={loadPresets} />
+                </Space>
+              ),
             },
           ]}
         />

@@ -25,13 +25,15 @@ def _arkham_card_maker_cwd():
         os.chdir(previous_cwd)
 
 
-def render_card_preview(card_content: dict, output_dir: Path, filename: str) -> str | None:
+def render_card_preview(card_content: dict, output_dir: Path, filename: str, dpi: int = 150, quality: int = 90) -> str | None:
     """将 .card JSON 渲染为卡牌预览图
 
     Args:
         card_content: .card 文件内容的字典表示
         output_dir: 输出目录
         filename: 输出文件名（不含扩展名）
+        dpi: 渲染 DPI
+        quality: JPEG 输出质量
 
     Returns:
         渲染后的图片路径，若渲染失败则返回 None
@@ -50,8 +52,9 @@ def render_card_preview(card_content: dict, output_dir: Path, filename: str) -> 
                 }
                 renderer = CardRenderer(assets_path=assets_path or None, config=config)
                 options = RenderOptions(
-                    dpi=150,
+                    dpi=dpi,
                     format="JPG",
+                    quality=quality,
                     bleed=0,
                     working_dir=str((settings.project_root / settings.local_card_db).resolve()),
                 )

@@ -117,6 +117,43 @@ export async function generateSessionSheets(sessionId: number): Promise<PublishS
   return resp.data;
 }
 
+export async function rollbackPublishSessionStep(sessionId: number, targetStep: string): Promise<PublishSession> {
+  const resp = await client.post(`/admin/publish/sessions/${sessionId}/rollback-step`, { target_step: targetStep });
+  return resp.data;
+}
+
+export async function confirmSessionSheets(sessionId: number): Promise<PublishSession> {
+  const resp = await client.post(`/admin/publish/sessions/${sessionId}/confirm-sheets`);
+  return resp.data;
+}
+
+export async function importSessionUrls(sessionId: number, source: string, urlMapping: Record<string, Record<string, unknown>>): Promise<PublishSession> {
+  const resp = await client.post(`/admin/publish/sessions/${sessionId}/import-urls`, { source, url_mapping: urlMapping });
+  return resp.data;
+}
+
+export async function fetchSessionSheetUrls(sessionId: number): Promise<{ items: Array<{ sheet_name: string; url: string; grid: Record<string, unknown> }> }> {
+  const resp = await client.get(`/admin/publish/sessions/${sessionId}/sheet-urls`);
+  return resp.data;
+}
+
+export async function exportSessionTTSBag(sessionId: number): Promise<Blob> {
+  const resp = await client.get(`/admin/publish/sessions/${sessionId}/tts-bag`, { responseType: 'blob' });
+  return resp.data as Blob;
+}
+
+export async function uploadSessionTTSJson(sessionId: number, file: File): Promise<PublishSession> {
+  const form = new FormData();
+  form.append('file', file);
+  const resp = await client.post(`/admin/publish/sessions/${sessionId}/upload-tts-json`, form);
+  return resp.data;
+}
+
+export async function exportSessionPatch(sessionId: number): Promise<PublishSession> {
+  const resp = await client.post(`/admin/publish/sessions/${sessionId}/export-patch`);
+  return resp.data;
+}
+
 export async function fetchReplacementPreview(sessionId: number): Promise<{ items: ReplacementPreviewItem[] }> {
   const resp = await client.get(`/admin/publish/sessions/${sessionId}/replacement-preview`);
   return resp.data;
@@ -124,5 +161,23 @@ export async function fetchReplacementPreview(sessionId: number): Promise<{ item
 
 export async function fetchDirectoryPresets(): Promise<{ items: PublishDirectoryPreset[] }> {
   const resp = await client.get('/admin/publish/directory-presets');
+  return resp.data;
+}
+
+export async function createDirectoryPreset(body: {
+  local_dir_prefix: string;
+  target_area: 'campaigns' | 'player_cards';
+  target_bag_path: string;
+  target_bag_guid: string;
+  target_object_dir: string;
+  label?: string;
+  is_active?: boolean;
+}): Promise<PublishDirectoryPreset> {
+  const resp = await client.post('/admin/publish/directory-presets', body);
+  return resp.data;
+}
+
+export async function initializeDirectoryPresets(): Promise<{ created: number; updated: number }> {
+  const resp = await client.post('/admin/publish/directory-presets/initialize-from-existing');
   return resp.data;
 }

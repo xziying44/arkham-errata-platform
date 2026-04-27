@@ -14,10 +14,13 @@ from app.models.errata_draft import (
     ErrataPackage,
     ErrataPackageStatus,
     PublishArtifact,
+    PublishArtifactKind,
+    PublishArtifactStatus,
     PublishSession,
 )
 from app.models.user import User
 from app.services.errata_drafts import append_audit_log, get_participant_usernames
+from app.services.card_database_publisher import publish_package_to_card_database
 
 router = APIRouter(prefix="/api/admin/packages", tags=["勘误包"])
 
@@ -180,6 +183,27 @@ async def complete_package(
     if package.status not in {ErrataPackageStatus.WAITING_PUBLISH, ErrataPackageStatus.PUBLISHING}:
         raise HTTPException(status_code=409, detail="只有待发布或发布中的勘误包可以完成发布")
     drafts = await load_package_drafts(db, package_id)
+    latest_session = (
+        await db.execute(
+            select(PublishSession)
+            .where(PublishSession.package_id == package_id)
+            .order_by(PublishSession.updated_at.desc(), PublishSession.id.desc())
+        )
+    ).scalars().first()
+    if latest_session is None:
+        raise HTTPException(status_code=409, detail="请先完成发布流程并生成补丁包")
+    patch_artifact = (
+        await db.execute(
+            select(PublishArtifact)
+            .where(PublishArtifact.session_id == latest_session.id)
+            .where(PublishArtifact.kind == PublishArtifactKind.PATCH_ZIP)
+            .where(PublishArtifact.status == PublishArtifactStatus.CONFIRMED)
+        )
+    ).scalars().first()
+    if patch_artifact is None:
+        raise HTTPException(status_code=409, detail="请先导出 SCED-downloads 补丁 zip")
+
+    publish_result = await publish_package_to_card_database(db, package, drafts)
 
     package.status = ErrataPackageStatus.PUBLISHED
     package.published_by = admin.id
@@ -197,8 +221,9 @@ async def complete_package(
             from_status,
             draft.status.value,
             draft.changed_faces,
-            "发布完成",
+            f"发布完成，写回卡牌数据库：{len(publish_result['written_files'])} 个文件，commit={publish_result['commit'] or '无变更'}",
         )
+    package.note = f"卡牌数据库写回 {len(publish_result['written_files'])} 个文件，commit={publish_result['commit'] or '无变更'}"
     await db.commit()
     await db.refresh(package)
     return serialize_package(package)

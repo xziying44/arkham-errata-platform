@@ -1,7 +1,9 @@
 """发布补丁包构建：生成替换计划和校验报告。"""
 
+import hashlib
 import json
 from pathlib import Path
+from typing import Any
 
 
 def _gmnotes_id(data: dict) -> str:
@@ -31,10 +33,34 @@ def _find_existing_chinese_cards(chinese_roots: list[tuple[str, Path]]) -> dict[
     return found
 
 
+def _resolve_directory_preset(local_relative_path: str, directory_presets: list[dict[str, Any]]) -> dict[str, Any] | None:
+    matches = [preset for preset in directory_presets if preset.get("is_active", True) and local_relative_path.startswith(str(preset.get("local_dir_prefix", "")))]
+    if not matches:
+        return None
+    return sorted(matches, key=lambda item: len(str(item.get("local_dir_prefix", ""))), reverse=True)[0]
+
+
+def _safe_object_name(name: str, card_id: str) -> str:
+    cleaned = name.strip().replace("🏅", "").strip().replace("/", "／")
+    return cleaned or card_id
+
+
+def _target_path_for_new_card(card: dict, preset: dict) -> str:
+    object_dir = str(preset.get("target_object_dir") or "").strip("/")
+    object_name = _safe_object_name(str(card.get("name_zh") or ""), card["arkhamdb_id"])
+    guid = hashlib.sha1(str(card["arkhamdb_id"]).encode("utf-8")).hexdigest()[:6]
+    filename = f"{object_name}.{guid}.json"
+    bag_dir = str(Path(str(preset.get("target_bag_path") or "")).parent).replace(".", ".")
+    if object_dir:
+        return f"{bag_dir}/{object_dir}/{filename}"
+    return f"{bag_dir}/{filename}"
+
+
 def build_replacement_plan(
     chinese_roots: list[tuple[str, Path]],
     package_cards: list[dict],
     url_mapping: dict[str, dict],
+    directory_presets: list[dict[str, Any]] | None = None,
 ) -> list[dict]:
     existing = _find_existing_chinese_cards(chinese_roots)
     plan: list[dict] = []
@@ -62,17 +88,23 @@ def build_replacement_plan(
                 "blocking_errors": blocking_errors,
             })
         else:
-            blocking_errors.append("缺少中文 TTS 记录，需要目录预设新增对象")
+            preset = _resolve_directory_preset(str(card.get("local_relative_path") or ""), directory_presets or [])
+            target_path = _target_path_for_new_card(card, preset) if preset else None
+            if preset is None:
+                blocking_errors.append("缺少中文 TTS 记录，需要目录预设新增对象")
             plan.append({
                 "arkhamdb_id": card_id,
                 "name_zh": card.get("name_zh", ""),
                 "action": "新增",
                 "source_path": None,
-                "target_path": None,
+                "target_path": target_path,
                 "old_face_url": "",
                 "old_back_url": "",
                 "new_face_url": mapping.get("face_url", "") if mapping else "",
                 "new_back_url": mapping.get("back_url", "") if mapping else "",
                 "blocking_errors": blocking_errors,
+                "directory_preset": preset,
+                "target_bag_path": preset.get("target_bag_path") if preset else None,
+                "target_object_key": Path(target_path).stem if target_path else None,
             })
     return plan

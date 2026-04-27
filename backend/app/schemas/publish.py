@@ -51,6 +51,16 @@ class PublishDirectoryPresetResponse(BaseModel):
     updated_at: datetime
 
 
+class PublishDirectoryPresetCreateRequest(BaseModel):
+    local_dir_prefix: str
+    target_area: str
+    target_bag_path: str
+    target_bag_guid: str
+    target_object_dir: str
+    label: str | None = None
+    is_active: bool = True
+
+
 class PublishDirectoryPresetUpdateRequest(BaseModel):
     target_bag_path: str | None = None
     target_bag_guid: str | None = None
