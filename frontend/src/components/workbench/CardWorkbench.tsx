@@ -8,10 +8,12 @@ import { fetchCardFileContent, previewCard } from '../../api/errata';
 import CardComparison from '../CardComparison';
 import JsonEditor from '../JsonEditor';
 import CardTextFieldsEditor from './CardTextFieldsEditor';
+import ErrataDiffPanel from './ErrataDiffPanel';
 import SymbolReferenceHelp from './SymbolReferenceHelp';
 import type { CardDetail, CardTreeCard, CardTreeNode, ErrataAuditLog, ErrataDraft, PreviewFace, WorkbenchMode } from '../../types';
 import { cancelErrataDraft, fetchErrataDraft, fetchErrataDraftLogs, saveErrataDraft } from '../../api/errataDrafts';
 import { createReviewPackage } from '../../api/packages';
+import { buildErrataDiff, buildJsonStringDecorations, offsetRangeToMonacoRange } from './errataDiff';
 
 const { Sider, Content } = Layout;
 const { Text, Title } = Typography;
@@ -185,6 +187,16 @@ function ttsSideLabel(side?: string) {
 function withCacheBust(url?: string | null, cacheBust?: number) {
   if (!url || !cacheBust) return url || null;
   return `${url}${url.includes('?') ? '&' : '?'}t=${cacheBust}`;
+}
+
+function parseObjectJson(value?: string): Record<string, unknown> | null {
+  if (!value) return {};
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
 }
 
 const horizontalCardTypes = new Set([
@@ -372,6 +384,25 @@ export default function CardWorkbench({ mode, packageId }: CardWorkbenchProps) {
   );
   const treeStats = useMemo(() => summarizeTree(tree), [tree]);
   const currentJson = modifiedJsonByFace[selectedFace] || '';
+  const currentDiff = useMemo(() => {
+    const original = draft?.original_faces?.[selectedFace] || fileContents[selectedFace] || {};
+    const modified = parseObjectJson(currentJson);
+    return buildErrataDiff(original, modified || {});
+  }, [currentJson, draft, fileContents, selectedFace]);
+  const jsonDecorations = useMemo(() => (
+    buildJsonStringDecorations(currentJson, currentDiff.changedFields).map((item) => {
+      const range = offsetRangeToMonacoRange(currentJson, item.startOffset, item.endOffset);
+      const originalText = currentDiff.changedFields.find((field) => field.key === item.key)?.originalText || '无';
+      return {
+        startLineNumber: range.lineNumber,
+        startColumn: range.column,
+        endLineNumber: range.endLineNumber,
+        endColumn: range.endColumn,
+        className: item.kind === 'added' ? 'errata-json-diff-added' : 'errata-json-diff-changed',
+        hoverMessage: `原始值：${originalText}`,
+      };
+    })
+  ), [currentDiff.changedFields, currentJson]);
   const previewMap = Object.fromEntries(previewFaces.map((item) => [item.face, item]));
   const faces = detail?.local_files.map((file) => file.face) ?? [];
   const isSingleSided = detail?.is_single_sided ?? faces.length === 1;
@@ -624,15 +655,18 @@ export default function CardWorkbench({ mode, packageId }: CardWorkbenchProps) {
                 </Space>
               }
             >
+              <ErrataDiffPanel fields={currentDiff.changedFields} />
               <CardTextFieldsEditor
                 selectedFace={selectedFace}
                 jsonByFace={modifiedJsonByFace}
                 onFaceJsonChange={handleUpdateFaceJson}
+                changedFieldKeys={currentDiff.changedFieldKeys}
               />
               <JsonEditor
                 value={currentJson}
                 onChange={(value) => handleUpdateFaceJson(selectedFace, value)}
                 height="360px"
+                decorations={jsonDecorations}
               />
             </Card>
             {auditLogs.length > 0 && (

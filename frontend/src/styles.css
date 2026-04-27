@@ -1,0 +1,11 @@
+.errata-json-diff-added {
+  background: rgba(34, 197, 94, 0.28);
+  border-radius: 3px;
+  outline: 1px solid rgba(22, 163, 74, 0.38);
+}
+
+.errata-json-diff-changed {
+  background: rgba(245, 158, 11, 0.30);
+  border-radius: 3px;
+  outline: 1px solid rgba(217, 119, 6, 0.42);
+}

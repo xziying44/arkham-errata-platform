@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
-import { Alert, Form, Input, Space, Typography } from 'antd';
+import type { CSSProperties } from 'react';
+import { Alert, Form, Input, Space, Tag, Typography } from 'antd';
 
 const { Text } = Typography;
 
@@ -7,6 +8,7 @@ interface CardTextFieldsEditorProps {
   selectedFace: string;
   jsonByFace: Record<string, string>;
   onFaceJsonChange: (face: string, value: string) => void;
+  changedFieldKeys?: Set<string>;
 }
 
 type CardTextFormValues = {
@@ -68,7 +70,32 @@ function updateFaceJson(
   onFaceJsonChange(face, JSON.stringify(next, null, 2));
 }
 
-export default function CardTextFieldsEditor({ selectedFace, jsonByFace, onFaceJsonChange }: CardTextFieldsEditorProps) {
+function labelWithDiff(label: string, key: keyof CardTextFormValues, changedFieldKeys: Set<string>) {
+  return (
+    <Space size={6}>
+      <span>{label}</span>
+      {changedFieldKeys.has(key) && <Tag color="warning" style={{ marginInlineEnd: 0 }}>已修改</Tag>}
+    </Space>
+  );
+}
+
+function itemStyle(key: keyof CardTextFormValues, changedFieldKeys: Set<string>): CSSProperties {
+  if (!changedFieldKeys.has(key)) return { marginBottom: 10 };
+  return {
+    marginBottom: 10,
+    padding: '8px 10px',
+    borderLeft: '4px solid #f59e0b',
+    borderRadius: 10,
+    background: '#fffbeb',
+  };
+}
+
+export default function CardTextFieldsEditor({
+  selectedFace,
+  jsonByFace,
+  onFaceJsonChange,
+  changedFieldKeys = new Set(),
+}: CardTextFieldsEditorProps) {
   const [form] = Form.useForm<CardTextFormValues>();
   const selectedContent = useMemo(() => parseJson(jsonByFace[selectedFace]), [jsonByFace, selectedFace]);
   const hasInvalidJson = selectedContent === null;
@@ -104,19 +131,19 @@ export default function CardTextFieldsEditor({ selectedFace, jsonByFace, onFaceJ
         disabled={hasInvalidJson}
         onValuesChange={handleValuesChange}
       >
-        <Form.Item label="名称" name="name" style={{ marginBottom: 10 }}>
+        <Form.Item label={labelWithDiff('名称', 'name', changedFieldKeys)} name="name" style={itemStyle('name', changedFieldKeys)}>
           <Input placeholder="name" />
         </Form.Item>
-        <Form.Item label="副名称" name="subtitle" style={{ marginBottom: 10 }}>
+        <Form.Item label={labelWithDiff('副名称', 'subtitle', changedFieldKeys)} name="subtitle" style={itemStyle('subtitle', changedFieldKeys)}>
           <Input placeholder="subtitle" />
         </Form.Item>
-        <Form.Item label="特性" name="traits" style={{ marginBottom: 10 }}>
+        <Form.Item label={labelWithDiff('特性', 'traits', changedFieldKeys)} name="traits" style={itemStyle('traits', changedFieldKeys)}>
           <Input placeholder="多个特性可用逗号、顿号或换行分隔" />
         </Form.Item>
-        <Form.Item label="正文" name="body" style={{ marginBottom: 10 }}>
+        <Form.Item label={labelWithDiff('正文', 'body', changedFieldKeys)} name="body" style={itemStyle('body', changedFieldKeys)}>
           <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder="body" />
         </Form.Item>
-        <Form.Item label="风味文本" name="flavor" style={{ marginBottom: 10 }}>
+        <Form.Item label={labelWithDiff('风味文本', 'flavor', changedFieldKeys)} name="flavor" style={itemStyle('flavor', changedFieldKeys)}>
           <Input.TextArea autoSize={{ minRows: 2, maxRows: 6 }} placeholder="flavor" />
         </Form.Item>
       </Form>
