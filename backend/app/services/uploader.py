@@ -1,8 +1,13 @@
 """图片上传服务 - 支持多种图床后端"""
 
 import base64
+import shutil
+from pathlib import Path
+
 import httpx
 from abc import ABC, abstractmethod
+
+from app.config import settings
 
 
 class ImageUploader(ABC):
@@ -77,17 +82,36 @@ class ImgBBUploader(ImageUploader):
 
 
 class LocalUploader(ImageUploader):
-    """本地上传器（开发用桩实现）"""
+    """本地上传器：复制到缓存目录，并返回前端可反代访问的相对 URL。"""
 
-    def __init__(self, port: int = 8234, host: str = "localhost"):
-        self.port = port
-        self.host = host
+    def __init__(self, cache_subdir: str = "sheets"):
+        self.cache_subdir = cache_subdir.strip("/") or "sheets"
 
     async def check_exists(self, filename: str) -> str | None:
+        target_path = self._target_path(filename)
+        if target_path.exists():
+            return self._public_url(target_path)
         return None
 
     async def upload(self, filepath: str, filename: str) -> str | None:
-        return f"http://{self.host}:{self.port}/sheets/{filename}"
+        source_path = Path(filepath)
+        if not source_path.exists() or not source_path.is_file():
+            return None
+
+        target_path = self._target_path(filename)
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        if source_path.resolve() != target_path.resolve():
+            shutil.copy2(source_path, target_path)
+        return self._public_url(target_path)
+
+    def _target_path(self, filename: str) -> Path:
+        safe_name = Path(filename).name
+        return settings.project_root / settings.cache_dir / self.cache_subdir / safe_name
+
+    def _public_url(self, path: Path) -> str:
+        cache_root = settings.project_root / settings.cache_dir
+        relative = path.relative_to(cache_root)
+        return f"/static/cache/{relative.as_posix()}"
 
 
 def create_uploader(config: dict) -> ImageUploader:
@@ -97,7 +121,7 @@ def create_uploader(config: dict) -> ImageUploader:
         config: 包含 image_host 等键的配置字典
             - image_host="cloudinary" 时需提供 cloud_name, api_key, api_secret
             - image_host="imgbb" 时需提供 imgbb_api_key
-            - image_host="local"（默认）时可选 localhost_port
+            - image_host="local"（默认）时可选 cache_subdir
 
     Returns:
         ImageUploader 实例
@@ -113,4 +137,4 @@ def create_uploader(config: dict) -> ImageUploader:
     elif host == "imgbb":
         return ImgBBUploader(config["imgbb_api_key"])
 
-    return LocalUploader(port=config.get("localhost_port", 8234))
+    return LocalUploader(cache_subdir=config.get("cache_subdir", "sheets"))
