@@ -35,6 +35,7 @@ const fieldLabels: Record<string, string> = {
 };
 
 const preferredFieldOrder = ['name', 'subtitle', 'traits', 'body', 'flavor'];
+const ignoredDiffKeys = new Set(['picture_base64']);
 
 function stableStringify(value: unknown): string {
   if (Array.isArray(value)) return JSON.stringify(value.map((item) => normalizeValue(item)));
@@ -42,6 +43,7 @@ function stableStringify(value: unknown): string {
     const record = value as Record<string, unknown>;
     const normalized = Object.fromEntries(
       Object.keys(record)
+        .filter((key) => !ignoredDiffKeys.has(key))
         .sort()
         .map((key) => [key, normalizeValue(record[key])]),
     );
@@ -54,7 +56,12 @@ function normalizeValue(value: unknown): unknown {
   if (Array.isArray(value)) return value.map((item) => normalizeValue(item));
   if (value && typeof value === 'object') {
     const record = value as Record<string, unknown>;
-    return Object.fromEntries(Object.keys(record).sort().map((key) => [key, normalizeValue(record[key])]));
+    return Object.fromEntries(
+      Object.keys(record)
+        .filter((key) => !ignoredDiffKeys.has(key))
+        .sort()
+        .map((key) => [key, normalizeValue(record[key])]),
+    );
   }
   return value;
 }
@@ -113,7 +120,7 @@ function statusForValues(originalValue: unknown, modifiedValue: unknown): Errata
 
 function sortedKeys(original: Record<string, unknown>, modified: Record<string, unknown>): string[] {
   const keys = new Set([...Object.keys(original), ...Object.keys(modified)]);
-  return [...keys].sort((left, right) => {
+  return [...keys].filter((key) => !ignoredDiffKeys.has(key)).sort((left, right) => {
     const leftIndex = preferredFieldOrder.indexOf(left);
     const rightIndex = preferredFieldOrder.indexOf(right);
     if (leftIndex !== -1 || rightIndex !== -1) {

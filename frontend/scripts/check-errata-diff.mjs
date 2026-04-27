@@ -52,4 +52,16 @@ const escapedBodyDecoration = escapedDecorations.find((item) => item.key === 'bo
 assert(escapedBodyDecoration, '转义换行的新增片段需要有字符级高亮');
 assert.equal(escapedJson.slice(escapedBodyDecoration.startOffset, escapedBodyDecoration.endOffset), '\\n第二行');
 
+const pictureOnlyDiff = buildErrataDiff(
+  { name: '图片卡', picture_base64: 'data:image/png;base64,AAA' },
+  { name: '图片卡', picture_base64: 'data:image/png;base64,BBB' },
+);
+assert.equal(pictureOnlyDiff.changedFields.length, 0, 'picture_base64 差异不应显示为勘误内容');
+
+const pictureWithBodyDiff = buildErrataDiff(
+  { body: '旧正文', picture_base64: 'data:image/png;base64,AAA' },
+  { body: '新正文', picture_base64: 'data:image/png;base64,BBB' },
+);
+assert.deepEqual(pictureWithBodyDiff.changedFields.map((item) => item.key), ['body']);
+
 console.log('勘误差异计算检查通过');
